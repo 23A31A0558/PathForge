@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PathForge - Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container d-flex flex-column justify-content-center flex-grow-1">
+        <div class="text-center mb-4">
+            <h1 class="brand-logo">Path<span>Forge</span></h1>
+            <p class="text-muted">Welcome back. Login to continue your journey.</p>
+        </div>
+
+        <div class="auth-container mt-0">
+            <div class="card p-4">
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label for="loginUsername" class="form-label fw-medium">Username</label>
+                        <input type="text" class="form-control" id="loginUsername" placeholder="Enter username">
+                        <div class="invalid-feedback">Please enter your username.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="loginPassword" class="form-label fw-medium">Password</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="loginPassword" placeholder="Enter password">
+                            <button class="btn btn-outline-secondary" type="button" id="toggleLoginPassword">Show</button>
+                            <div class="invalid-feedback">Please enter your password.</div>
+                        </div>
+                    </div>
+                    <div id="loginError" class="alert alert-danger d-none py-2" role="alert"></div>
+                    <button type="submit" class="btn btn-primary w-100 mt-2">Sign In</button>
+                </form>
+                <div class="text-center mt-3">
+                    <p class="mb-0 text-muted">Don't have an account? <a href="register.html">Register</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/api.js?v=2"></script>
+    <script src="js/auth.js?v=2"></script>
+    <script src="js/login.js?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PathForge - Leaderboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            background-color: #f4f6f8;
+        }
+        .leaderboard-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .table-custom {
+            border-collapse: separate;
+            border-spacing: 0 12px;
+        }
+        .table-custom tr {
+            background-color: #ffffff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .table-custom tr:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+        .table-custom th {
+            border-bottom: none;
+            color: #6c757d;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            padding: 1rem;
+        }
+        .table-custom td {
+            vertical-align: middle;
+            border-top: none;
+            border-bottom: none;
+            padding: 1rem;
+        }
+        /* Top rounded corners for first td */
+        .table-custom td:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+        /* Bottom rounded corners for last td */
+        .table-custom td:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+        
+        .rank-badge {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .rank-1 { background: linear-gradient(135deg, #ffd700, #ffae00); color: white; box-shadow: 0 4px 10px rgba(255, 215, 0, 0.4); }
+        .rank-2 { background: linear-gradient(135deg, #e0e0e0, #a0a0a0); color: white; box-shadow: 0 4px 10px rgba(192, 192, 192, 0.4); }
+        .rank-3 { background: linear-gradient(135deg, #ffa07a, #cd7f32); color: white; box-shadow: 0 4px 10px rgba(205, 127, 50, 0.4); }
+        .rank-other { background-color: #f1f3f5; color: #495057; }
+        .progress-bar-custom {
+            height: 10px;
+            border-radius: 5px;
+            background-color: #e9ecef;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            border-radius: 5px;
+            transition: width 1s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg border-bottom px-4" style="background-color: var(--primary-color);">
+        <a class="navbar-brand brand-logo text-white m-0 p-0" href="dashboard.html">Path<span style="color: var(--accent-color);">Forge</span></a>
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <div class="ms-auto flex-row d-flex align-items-center mt-3 mt-lg-0 gap-3">
+                <a href="roadmap.html" class="text-white text-decoration-none">Roadmaps</a>
+                <a href="leaderboard.html" class="text-white text-decoration-none"><strong style="color: var(--accent-color); border-bottom: 2px solid var(--accent-color); padding-bottom: 2px;">Leaderboard</strong></a>
+                <a href="friends.html" class="text-white text-decoration-none">Friends</a>
+                <a href="groups.html" class="text-white text-decoration-none">Groups</a>
+                <span class="text-white d-none d-lg-inline fw-semibold mx-2" id="userDisplay">...</span>
+                <button class="btn btn-sm btn-outline-light rounded-pill" id="logoutBtn">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="leaderboard-card">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
+                        <h2 class="m-0 fw-bold" style="color: var(--primary-color);">🏆 Hall of Fame</h2>
+                        <div class="btn-group shadow-sm" role="group">
+                            <input type="radio" class="btn-check" name="btnradio" id="btnGlobal" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary fw-medium" for="btnGlobal">Global</label>
+
+                            <input type="radio" class="btn-check" name="btnradio" id="btnBackend" autocomplete="off">
+                            <label class="btn btn-outline-primary fw-medium" for="btnBackend">Backend</label>
+
+                            <input type="radio" class="btn-check" name="btnradio" id="btnFrontend" autocomplete="off">
+                            <label class="btn btn-outline-primary fw-medium" for="btnFrontend">Frontend</label>
+
+                            <input type="radio" class="btn-check" name="btnradio" id="btnAI" autocomplete="off">
+                            <label class="btn btn-outline-primary fw-medium" for="btnAI">AI/Data</label>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive" style="min-height: 400px;">
+                        <table class="table table-custom text-center align-middle">
+                            <thead>
+                                <tr>
+                                    <th width="10%">Rank</th>
+                                    <th width="30%">Student</th>
+                                    <th width="20%">Score</th>
+                                    <th width="40%">Progress</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboardBody">
+                                <!-- Data will be injected here -->
+                            </tbody>
+                        </table>
+                        <div id="loadingIndicator" class="text-center mt-5 d-none">
+                            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/leaderboard.js"></script>
+</body>
+</html>

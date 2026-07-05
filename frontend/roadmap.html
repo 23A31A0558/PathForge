@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PathForge - Journey Map</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="css/style.css?v=2">
+</head>
+<body>
+    <div class="journey-layout">
+        <!-- 1. Left Sidebar Navigation -->
+        <aside class="journey-sidebar">
+            <a href="dashboard.html" class="sidebar-logo">
+                Path<span>Forge</span>
+            </a>
+            
+            <nav class="sidebar-menu">
+                <a href="dashboard.html" class="sidebar-link">
+                    <i class="bi bi-grid-fill"></i> Dashboard
+                </a>
+                <a href="roadmap.html" class="sidebar-link active">
+                    <i class="bi bi-map-fill"></i> Roadmaps
+                </a>
+                <a href="leaderboard.html" class="sidebar-link">
+                    <i class="bi bi-trophy-fill"></i> Leaderboard
+                </a>
+                <a href="friends.html" class="sidebar-link">
+                    <i class="bi bi-people-fill"></i> Friends
+                </a>
+                <a href="groups.html" class="sidebar-link">
+                    <i class="bi bi-collection-fill"></i> Groups
+                </a>
+                <a href="#" class="sidebar-link">
+                    <i class="bi bi-journal-check"></i> Quizzes
+                </a>
+                <a href="#" class="sidebar-link">
+                    <i class="bi bi-award-fill"></i> Achievements
+                </a>
+                <a href="#" class="sidebar-link">
+                    <i class="bi bi-gear-fill"></i> Settings
+                </a>
+            </nav>
+            
+            <!-- Profile details at the bottom of the sidebar -->
+            <div class="sidebar-profile">
+                <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100&q=80" alt="Avatar" class="profile-avatar" id="sidebarAvatar">
+                <div class="overflow-hidden">
+                    <h6 class="mb-0 fw-bold text-truncate" id="sidebarUsername">Sai Charan</h6>
+                    <small class="text-muted d-block text-truncate" style="font-size: 0.72rem;">Level 12 • 1950 XP</small>
+                </div>
+                <button class="btn btn-link ms-auto p-0 text-danger" id="logoutBtn" title="Logout">
+                    <i class="bi bi-box-arrow-right fs-5"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- 2. Main Journey Map & Content -->
+        <main class="journey-main container-fluid">
+            <!-- Row 1: Overall Progress Header Card -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="progress-banner-card">
+                        <div class="row align-items-center">
+                            <div class="col-md-4 mb-3 mb-md-0">
+                                <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-bold text-uppercase mb-2" style="font-size: 0.75rem;">Your personalized learning path</span>
+                                <h2 id="journeyTitle">Backend Developer Journey</h2>
+                                <p class="mb-0 mb-3">Keep pushing! You are doing great.</p>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-primary dropdown-toggle rounded-pill px-3 fw-bold" type="button" id="trackSwitcherBtn" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.78rem;">
+                                        Loading tracks...
+                                    </button>
+                                    <ul class="dropdown-menu shadow border-light" id="trackSwitcherMenu" aria-labelledby="trackSwitcherBtn">
+                                        <!-- Dynamic items -->
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <!-- Stats details -->
+                            <div class="col-md-8">
+                                <div class="row g-3">
+                                    <div class="col-sm-3 col-6">
+                                        <div class="stat-item text-center">
+                                            <div class="stat-item-label">Overall Progress</div>
+                                            <div class="stat-item-value" id="overallProgressVal">42%</div>
+                                            <div class="progress mt-2" style="height: 6px;">
+                                                <div id="overallProgressBar" class="progress-bar bg-primary" role="progressbar" style="width: 42%;"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-3 col-6">
+                                        <div class="stat-item">
+                                            <div class="stat-item-label">Current Position</div>
+                                            <div class="stat-item-value text-truncate active-node" id="currentPositionVal">Functions</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-3 col-6">
+                                        <div class="stat-item">
+                                            <div class="stat-item-label">Next Destination</div>
+                                            <div class="stat-item-value text-truncate next-node" id="nextDestinationVal">OOP Concepts</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-3 col-6">
+                                        <div class="stat-item">
+                                            <div class="stat-item-label">Est. Completion</div>
+                                            <div class="stat-item-value text-truncate" id="estCompletionVal">3 days</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 2: Journey Map Canvas & Side details Panel -->
+            <div class="row flex-grow-1 align-items-stretch g-4">
+                <!-- Journey Map Column -->
+                <div class="col-lg-8">
+                    <div class="roadmap-canvas-wrapper" id="canvasWrapper">
+                        <!-- Landscape background illustrations -->
+                        <div class="landscape-bg">
+                            <svg viewBox="0 0 1000 600" preserveAspectRatio="none" class="landscape-svg">
+                                <!-- Far Mountains -->
+                                <path d="M 0 450 L 150 250 L 350 400 L 550 200 L 800 450 L 1000 300 L 1000 600 L 0 600 Z" fill="#EEF2FF" opacity="0.4"></path>
+                                <path d="M 100 450 L 300 280 L 500 420 L 700 250 L 950 450 L 1000 400 L 1000 600 L 100 600 Z" fill="#E2E8F0" opacity="0.3"></path>
+                                
+                                <!-- Near Hills -->
+                                <path d="M 0 520 Q 250 430 500 520 T 1000 480 L 1000 600 L 0 600 Z" fill="#F1F5F9" opacity="0.8"></path>
+                                <path d="M 0 550 Q 250 480 500 550 T 1000 520 L 1000 600 L 0 600 Z" fill="#E2E8F0" opacity="0.9"></path>
+                            </svg>
+                            
+                            <!-- Floating clouds -->
+                            <div class="cloud cloud-1"></div>
+                            <div class="cloud cloud-2"></div>
+                            <div class="cloud cloud-3"></div>
+                        </div>
+
+                        <!-- Dynamic SVG Path Line -->
+                        <svg class="roadmap-svg-canvas" id="roadmapSvg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <path id="pathCompleted" d="" fill="none" stroke="#22C55E" stroke-width="1.2" stroke-linecap="round" filter="drop-shadow(0px 0px 4px rgba(34, 197, 94, 0.4))"></path>
+                            <path id="pathLocked" d="" fill="none" stroke="#94A3B8" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="1.5 1.5"></path>
+                        </svg>
+
+                        <!-- Nodes appended here dynamically by JS -->
+                        <div id="nodesContainer" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 10;"></div>
+                        
+                        <!-- Loading Indicator inside canvas -->
+                        <div id="canvasLoader" class="d-flex flex-column align-items-center justify-content-center h-100 w-100 position-absolute bg-white bg-opacity-75" style="z-index: 100; top: 0; left: 0; border-radius: 28px;">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading Journey...</span>
+                            </div>
+                            <p class="mt-3 text-muted fw-bold">Mapping your journey path...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Node Details Panel Column -->
+                <div class="col-lg-4 d-flex flex-column">
+                    <div class="details-panel-card" id="detailsPanel">
+                        <!-- Default empty state -->
+                        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-center py-5" id="panelEmptyState">
+                            <i class="bi bi-compass text-primary mb-3" style="font-size: 3rem; opacity: 0.6;"></i>
+                            <h5 class="fw-bold mb-2">Select a Checkpoint</h5>
+                            <p class="text-muted small px-3">Click on any unlocked checkpoint in your journey path to view resources, quizzes, and project challenges.</p>
+                        </div>
+
+                        <!-- Dynamic node details (visible when a node is selected) -->
+                        <div id="panelActiveContent" class="d-none flex-grow-1 d-flex flex-column">
+                            <div class="details-panel-header">
+                                <div class="d-flex gap-3 align-items-center">
+                                    <div class="details-topic-icon" id="panelTopicIcon">f(x)</div>
+                                    <div>
+                                        <h5 class="fw-bold mb-0" id="panelTopicTitle">Functions</h5>
+                                        <small class="text-muted d-block" id="panelTopicDesc">Understand and create reusable code blocks.</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="details-meta-grid">
+                                <div class="meta-box">
+                                    <span class="meta-box-label"><i class="bi bi-clock"></i> Est. Time</span>
+                                    <span class="meta-box-val" id="panelMetaTime">45 min</span>
+                                </div>
+                                <div class="meta-box">
+                                    <span class="meta-box-label"><i class="bi bi-bar-chart-steps"></i> Difficulty</span>
+                                    <span class="meta-box-val text-capitalize" id="panelMetaDiff">Medium</span>
+                                </div>
+                                <div class="meta-box">
+                                    <span class="meta-box-label"><i class="bi bi-patch-check"></i> Quizzes</span>
+                                    <span class="meta-box-val" id="panelMetaQuizzes">5 Questions</span>
+                                </div>
+                                <div class="meta-box">
+                                    <span class="meta-box-label"><i class="bi bi-folder2-open"></i> Resources</span>
+                                    <span class="meta-box-val" id="panelMetaResources">3 Materials</span>
+                                </div>
+                            </div>
+
+                            <!-- Learning Resources -->
+                            <div class="mb-4">
+                                <div class="panel-section-title">Learning Resources</div>
+                                <div class="resource-list" id="panelResourceList">
+                                    <!-- Dynamic items -->
+                                </div>
+                            </div>
+
+                            <!-- Mini Project Section -->
+                            <div class="mb-4" id="panelProjectSection">
+                                <div class="panel-section-title">Checkpoint Mini Project</div>
+                                <div class="card p-3 border-light bg-light bg-opacity-50">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="fw-bold mb-1" id="panelProjectTitle">Build a Calculator App</h6>
+                                            <small class="text-muted d-block" style="font-size: 0.78rem;">Create a simple calculator using functions.</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary" style="font-size: 0.75rem;" onclick="alert('Open project details! Showcase your code in git.')">View Project</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Notes Section -->
+                            <div class="mb-4 flex-grow-1 d-flex flex-column">
+                                <div class="panel-section-title">Personal Notes</div>
+                                <textarea class="form-control flex-grow-1" id="panelNotesArea" rows="3" placeholder="Add your personal notes here..."></textarea>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="d-flex gap-2 mt-auto">
+                                <a href="#" target="_blank" class="btn btn-primary flex-grow-1" id="panelStartLearnBtn">Start Learning</a>
+                                <a href="#" class="btn btn-warning flex-grow-1" id="panelTakeQuizBtn">Take Quiz</a>
+                                <button class="btn btn-outline-secondary" id="panelSaveNotesBtn"><i class="bi bi-save-fill"></i> Save Notes</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Bootstrap 5 bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js?v=2"></script>
+    <script src="js/auth.js?v=2"></script>
+    <script src="js/roadmap.js?v=2"></script>
+</body>
+</html>

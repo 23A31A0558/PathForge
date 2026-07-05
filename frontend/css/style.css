@@ -1,0 +1,570 @@
+/* PathForge - Premium Stylesheet (Light Theme Journey Map Redesign) */
+
+:root {
+    --primary-color: #4F46E5; /* Indigo 600 */
+    --primary-hover: #4338CA; /* Indigo 700 */
+    --primary-light: #EEF2FF; /* Indigo 50 */
+    --success-color: #22C55E; /* Green 500 */
+    --success-hover: #16A34A; /* Green 600 */
+    --success-light: #DCFCE7; /* Green 50 */
+    --bg-color: #F8FAFC; /* Slate 50 */
+    --card-bg: #FFFFFF;
+    --text-color: #1E293B; /* Slate 800 */
+    --text-muted: #64748B; /* Slate 500 */
+    --border-color: #E2E8F0; /* Slate 200 */
+    --amber-color: #F59E0B; /* Amber 500 */
+    --amber-light: #FEF3C7; /* Amber 500 light */
+    
+    --card-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04), 0 2px 8px -1px rgba(15, 23, 42, 0.02);
+    --card-shadow-hover: 0 20px 25px -5px rgba(79, 70, 229, 0.06), 0 8px 10px -6px rgba(79, 70, 229, 0.04);
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
+}
+
+/* Layout Framework */
+.journey-layout {
+    display: flex;
+    min-height: 100vh;
+    position: relative;
+}
+
+/* Left Sidebar Navigation */
+.journey-sidebar {
+    width: 260px;
+    background: #FFFFFF;
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    padding: 1.75rem 1.25rem;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    z-index: 100;
+    flex-shrink: 0;
+}
+
+.sidebar-logo {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--text-color);
+    margin-bottom: 2.5rem;
+    padding-left: 0.5rem;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.sidebar-logo span {
+    color: var(--primary-color);
+}
+
+.sidebar-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.75rem 1rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-radius: 12px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none !important;
+}
+
+.sidebar-link i {
+    font-size: 1.2rem;
+    transition: transform 0.2s;
+}
+
+.sidebar-link:hover {
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+}
+
+.sidebar-link:hover i {
+    transform: translateX(2px);
+}
+
+.sidebar-link.active {
+    background-color: var(--primary-color);
+    color: #FFFFFF !important;
+}
+
+.sidebar-profile {
+    margin-top: auto;
+    background: var(--bg-color);
+    border-radius: 16px;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.01);
+}
+
+.profile-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #FFFFFF;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+/* Main Content Panel */
+.journey-main {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 2rem;
+    gap: 2rem;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* Overall Progress Banner Card */
+.progress-banner-card {
+    background: #FFFFFF;
+    border-radius: 24px;
+    padding: 1.75rem 2rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--card-shadow);
+}
+
+.progress-banner-card h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-color);
+    margin-bottom: 0.25rem;
+}
+
+.progress-banner-card p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-item {
+    background: var(--bg-color);
+    border-radius: 16px;
+    padding: 0.85rem 1.25rem;
+    border: 1px solid var(--border-color);
+    height: 100%;
+}
+
+.stat-item-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.stat-item-value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.stat-item-value.active-node {
+    color: var(--primary-color);
+}
+
+.stat-item-value.next-node {
+    color: var(--success-color);
+}
+
+/* Journey Canvas Wrapper */
+.roadmap-canvas-wrapper {
+    background: #FFFFFF;
+    border-radius: 28px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--card-shadow);
+    position: relative;
+    overflow: hidden;
+    height: 620px;
+    user-select: none;
+}
+
+/* Soft Illustrated Landscape Background */
+.landscape-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.landscape-svg {
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Cloud Styles & Floating Animations */
+.cloud {
+    background: #FFFFFF;
+    border-radius: 100px;
+    position: absolute;
+    opacity: 0.5;
+    pointer-events: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.01);
+}
+
+.cloud::before, .cloud::after {
+    content: '';
+    background: #FFFFFF;
+    border-radius: 100px;
+    position: absolute;
+}
+
+.cloud-1 {
+    width: 90px; height: 30px; top: 12%; left: 8%;
+    animation: floatCloud 50s linear infinite;
+}
+.cloud-2 {
+    width: 120px; height: 40px; top: 18%; right: 10%;
+    animation: floatCloud 75s linear infinite reverse;
+}
+.cloud-3 {
+    width: 75px; height: 25px; top: 25%; left: 45%;
+    animation: floatCloud 65s linear infinite;
+}
+
+@keyframes floatCloud {
+    0% { transform: translateX(-150px); }
+    100% { transform: translateX(450px); }
+}
+
+/* Dynamic SVG Path Canvas */
+.roadmap-svg-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* Checkpoint Nodes */
+.journey-node {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    border: 6px solid #E2E8F0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.15rem;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 6px 12px rgba(15, 23, 42, 0.06);
+}
+
+.journey-node:hover {
+    transform: translate(-50%, -50%) scale(1.15);
+    box-shadow: 0 12px 24px rgba(79, 70, 229, 0.15);
+}
+
+/* Completed Node (Green Checkmark) */
+.node-completed {
+    border-color: var(--success-color) !important;
+    background: var(--success-light) !important;
+    color: var(--success-hover) !important;
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.2);
+}
+
+/* Current Node (Pulsing Purple) */
+.node-current {
+    border-color: var(--primary-color) !important;
+    background: var(--primary-light) !important;
+    color: var(--primary-hover) !important;
+    width: 78px;
+    height: 78px;
+    animation: nodePulse 2.5s infinite ease-in-out;
+    box-shadow: 0 0 20px rgba(79, 70, 229, 0.3);
+}
+
+@keyframes nodePulse {
+    0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
+    70% { box-shadow: 0 0 0 15px rgba(79, 70, 229, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+}
+
+/* Locked Node (Grey Lock) */
+.node-locked {
+    border-color: #CBD5E1 !important;
+    background: #F1F5F9 !important;
+    color: #94A3B8 !important;
+}
+
+/* Goal Node (Trophy Golden) */
+.node-goal {
+    border-color: var(--amber-color) !important;
+    background: var(--amber-light) !important;
+    color: var(--amber-hover) !important;
+    box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+    width: 72px;
+    height: 72px;
+}
+
+/* Label below Node */
+.node-label {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 12px;
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+    padding: 0.3rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-color);
+    white-space: nowrap;
+    box-shadow: 0 4px 6px rgba(15, 23, 42, 0.03);
+    pointer-events: none;
+    transition: all 0.2s ease;
+}
+
+.journey-node:hover .node-label {
+    background: var(--primary-color);
+    color: #FFFFFF;
+    border-color: var(--primary-color);
+    box-shadow: 0 6px 12px rgba(79, 70, 229, 0.15);
+}
+
+/* Hover Node Details Tooltip Card */
+.node-hover-card {
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    width: 230px;
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 0.95rem;
+    box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.08);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 100;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.node-hover-card::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 8px solid transparent;
+    border-top-color: #FFFFFF;
+}
+
+.node-hover-card::before {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 9px solid transparent;
+    border-top-color: var(--border-color);
+    z-index: -1;
+}
+
+.journey-node:hover .node-hover-card {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.node-hover-title {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--text-color);
+    margin-bottom: 0.4rem;
+}
+
+.node-hover-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.node-hover-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+/* Side Details Panel Card */
+.details-panel-card {
+    background: #FFFFFF;
+    border-radius: 28px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--card-shadow);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 1.75rem;
+}
+
+.details-panel-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+}
+
+.details-topic-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--primary-light);
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.details-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.meta-box {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.65rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.meta-box-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.15rem;
+}
+
+.meta-box-val {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.resource-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.resource-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-color);
+    transition: all 0.2s;
+    text-decoration: none !important;
+}
+
+.resource-item:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: var(--primary-light);
+    transform: translateX(3px);
+}
+
+.resource-item i.type-icon {
+    font-size: 1.1rem;
+    color: var(--primary-color);
+    margin-right: 0.5rem;
+}
+
+.resource-item i.chevron-icon {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    transition: transform 0.2s;
+}
+
+.resource-item:hover i.chevron-icon {
+    color: var(--primary-color);
+    transform: translateX(2px);
+}
+
+.panel-section-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.progress-banner-card, .roadmap-canvas-wrapper, .details-panel-card {
+    animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
