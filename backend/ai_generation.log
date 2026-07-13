@@ -1282,3 +1282,192 @@ Ensure all JSON fields are populated. Return JSON only.
 2026-07-12 23:03:48,306 - ai_generation - INFO - selected_roadmap_id: 97
 2026-07-12 23:03:48,306 - ai_generation - INFO - Progress %: 0.00%
 2026-07-12 23:03:48,337 - ai_generation - INFO - Generation status successfully set to READY for user 49
+2026-07-13 23:30:19,758 - ai_generation - INFO - Background roadmap generation worker started for user 50
+2026-07-13 23:30:19,768 - ai_generation - INFO - AI Roadmap generation pipeline execution started using Groq
+2026-07-13 23:30:19,768 - ai_generation - INFO - Building optimized prompt using user profile data
+2026-07-13 23:30:19,768 - ai_generation - INFO - AI prompt built. Prompt text length: 1310
+2026-07-13 23:30:19,768 - ai_generation - INFO - Prompt Generated [OK]
+2026-07-13 23:30:19,768 - ai_generation - INFO - Groq Request Sent
+2026-07-13 23:30:19,768 - ai_generation - INFO - Groq API call initiated (Attempt 1/4). Prompt length: 1310
+2026-07-13 23:30:23,264 - ai_generation - INFO - Groq Response Received
+2026-07-13 23:30:23,265 - ai_generation - INFO - Groq Response Received [OK]
+2026-07-13 23:30:23,265 - ai_generation - INFO - Starting JSON validation check
+2026-07-13 23:30:23,265 - ai_generation - ERROR - Schema validation errors: [{'type': 'missing', 'loc': ('roadmaps', 1, 'phases', 2, 'topics', 0, 'mini_project'), 'msg': 'Field required', 'input': {'topic': 'Deployment, Testing, and CI/CD', 'difficulty': 'Hard', 'estimated_hours': 40, 'resources': [{'title': 'Deployment Tutorial by DigitalOcean', 'url': 'https://www.digitalocean.com/community/tutorials/how-to-deploy-a-flask-application-on-ubuntu-18-04'}, {'title': 'Testing Tutorial by Test-Driven Development by Example', 'url': 'https://www.amazon.com/Test-Driven-Development-Example-Kent-Beck/dp/0321146530'}]}, 'url': 'https://errors.pydantic.dev/2.12/v/missing'}, {'type': 'missing', 'loc': ('roadmaps', 1, 'phases', 2, 'topics', 0, 'quiz_required'), 'msg': 'Field required', 'input': {'topic': 'Deployment, Testing, and CI/CD', 'difficulty': 'Hard', 'estimated_hours': 40, 'resources': [{'title': 'Deployment Tutorial by DigitalOcean', 'url': 'https://www.digitalocean.com/community/tutorials/how-to-deploy-a-flask-application-on-ubuntu-18-04'}, {'title': 'Testing Tutorial by Test-Driven Development by Example', 'url': 'https://www.amazon.com/Test-Driven-Development-Example-Kent-Beck/dp/0321146530'}]}, 'url': 'https://errors.pydantic.dev/2.12/v/missing'}]
+2026-07-13 23:30:23,265 - ai_generation - WARNING - Error executing Groq call/validation (Attempt 1/4): AI response JSON structure is invalid: [{'type': 'missing', 'loc': ('roadmaps', 1, 'phases', 2, 'topics', 0, 'mini_project'), 'msg': 'Field required', 'input': {'topic': 'Deployment, Testing, and CI/CD', 'difficulty': 'Hard', 'estimated_hours': 40, 'resources': [{'title': 'Deployment Tutorial by DigitalOcean', 'url': 'https://www.digitalocean.com/community/tutorials/how-to-deploy-a-flask-application-on-ubuntu-18-04'}, {'title': 'Testing Tutorial by Test-Driven Development by Example', 'url': 'https://www.amazon.com/Test-Driven-Development-Example-Kent-Beck/dp/0321146530'}]}, 'url': 'https://errors.pydantic.dev/2.12/v/missing'}, {'type': 'missing', 'loc': ('roadmaps', 1, 'phases', 2, 'topics', 0, 'quiz_required'), 'msg': 'Field required', 'input': {'topic': 'Deployment, Testing, and CI/CD', 'difficulty': 'Hard', 'estimated_hours': 40, 'resources': [{'title': 'Deployment Tutorial by DigitalOcean', 'url': 'https://www.digitalocean.com/community/tutorials/how-to-deploy-a-flask-application-on-ubuntu-18-04'}, {'title': 'Testing Tutorial by Test-Driven Development by Example', 'url': 'https://www.amazon.com/Test-Driven-Development-Example-Kent-Beck/dp/0321146530'}]}, 'url': 'https://errors.pydantic.dev/2.12/v/missing'}].
+2026-07-13 23:30:23,265 - ai_generation - INFO - Retrying in 2 seconds...
+2026-07-13 23:30:25,266 - ai_generation - INFO - Retry Started
+2026-07-13 23:30:25,266 - ai_generation - INFO - Groq Request Sent
+2026-07-13 23:30:25,266 - ai_generation - INFO - Groq API call initiated (Attempt 2/4). Prompt length: 1310
+2026-07-13 23:30:27,705 - ai_generation - INFO - Groq Response Received
+2026-07-13 23:30:27,706 - ai_generation - INFO - Groq Response Received [OK]
+2026-07-13 23:30:27,706 - ai_generation - INFO - Starting JSON validation check
+2026-07-13 23:30:27,707 - ai_generation - INFO - JSON response schema validated successfully
+2026-07-13 23:30:27,707 - ai_generation - INFO - JSON Validated
+2026-07-13 23:30:27,707 - ai_generation - INFO - JSON Valid [OK]
+2026-07-13 23:30:27,708 - ai_generation - INFO - Normalizing and mapping resource URLs for topics
+2026-07-13 23:30:27,708 - ai_generation - INFO - Finished resource mapping. Updated resources for 17 items.
+2026-07-13 23:30:27,708 - ai_generation - INFO - AI Roadmap generation pipeline executed successfully using Groq
+2026-07-13 23:30:27,719 - ai_generation - INFO - Roadmap Created
+2026-07-13 23:30:27,719 - ai_generation - INFO - Roadmap ID: 99
+2026-07-13 23:30:27,734 - ai_generation - INFO - Phase Count: 3
+2026-07-13 23:30:27,734 - ai_generation - INFO - Topic Count: 8
+2026-07-13 23:30:27,735 - ai_generation - INFO - Roadmap Created
+2026-07-13 23:30:27,735 - ai_generation - INFO - Roadmap ID: 100
+2026-07-13 23:30:27,744 - ai_generation - INFO - Phase Count: 3
+2026-07-13 23:30:27,744 - ai_generation - INFO - Topic Count: 9
+2026-07-13 23:30:27,753 - ai_generation - INFO - Roadmap Saved ✓
+2026-07-13 23:30:27,787 - ai_generation - INFO - Phase Count: 3
+2026-07-13 23:30:27,787 - ai_generation - INFO - Topic Count: 8
+2026-07-13 23:30:27,787 - ai_generation - INFO - selected_roadmap_id: 99
+2026-07-13 23:30:27,787 - ai_generation - INFO - Progress %: 0.00%
+2026-07-13 23:30:27,797 - ai_generation - INFO - Generation status successfully set to READY for user 50
+2026-07-13 23:32:48,799 - ai_generation - INFO - Background roadmap generation worker started for user 38
+2026-07-13 23:32:48,803 - ai_generation - INFO - AI Roadmap generation pipeline execution started using Groq
+2026-07-13 23:32:48,804 - ai_generation - INFO - Building optimized prompt using user profile data
+2026-07-13 23:32:48,804 - ai_generation - INFO - AI prompt built. Prompt text length: 1697
+2026-07-13 23:32:48,804 - ai_generation - INFO - Prompt Generated [OK]
+2026-07-13 23:32:48,804 - ai_generation - INFO - Groq Request Sent
+2026-07-13 23:32:48,804 - ai_generation - INFO - Groq API call initiated (Attempt 1/4). Prompt length: 1697
+2026-07-13 23:32:51,427 - ai_generation - INFO - Groq Response Received
+2026-07-13 23:32:51,428 - ai_generation - INFO - Groq Response Received [OK]
+2026-07-13 23:32:51,428 - ai_generation - INFO - Starting JSON validation check
+2026-07-13 23:32:51,429 - ai_generation - INFO - JSON response schema validated successfully
+2026-07-13 23:32:51,429 - ai_generation - INFO - JSON Validated
+2026-07-13 23:32:51,429 - ai_generation - INFO - JSON Valid [OK]
+2026-07-13 23:32:51,429 - ai_generation - INFO - Normalizing and mapping resource URLs for topics
+2026-07-13 23:32:51,431 - ai_generation - INFO - Finished resource mapping. Updated resources for 15 items.
+2026-07-13 23:32:51,431 - ai_generation - INFO - AI Roadmap generation pipeline executed successfully using Groq
+2026-07-13 23:32:51,438 - ai_generation - INFO - Roadmap Created
+2026-07-13 23:32:51,438 - ai_generation - INFO - Roadmap ID: 101
+2026-07-13 23:32:51,462 - ai_generation - INFO - Phase Count: 3
+2026-07-13 23:32:51,462 - ai_generation - INFO - Topic Count: 6
+2026-07-13 23:32:51,467 - ai_generation - INFO - Roadmap Created
+2026-07-13 23:32:51,468 - ai_generation - INFO - Roadmap ID: 102
+2026-07-13 23:32:51,485 - ai_generation - INFO - Phase Count: 3
+2026-07-13 23:32:51,485 - ai_generation - INFO - Topic Count: 6
+2026-07-13 23:32:51,509 - ai_generation - INFO - Roadmap Saved ✓
+2026-07-13 23:32:51,544 - ai_generation - INFO - Phase Count: 3
+2026-07-13 23:32:51,545 - ai_generation - INFO - Topic Count: 6
+2026-07-13 23:32:51,545 - ai_generation - INFO - selected_roadmap_id: 101
+2026-07-13 23:32:51,545 - ai_generation - INFO - Progress %: 0.00%
+2026-07-13 23:32:51,565 - ai_generation - INFO - Generation status successfully set to READY for user 38
+2026-07-13 23:33:09,813 - ai_generation - INFO - Background roadmap generation worker started for user 38
+2026-07-13 23:33:09,820 - ai_generation - INFO - AI Roadmap generation pipeline execution started using Groq
+2026-07-13 23:33:09,820 - ai_generation - INFO - Building optimized prompt using user profile data
+2026-07-13 23:33:09,820 - ai_generation - INFO - AI prompt built. Prompt text length: 1685
+2026-07-13 23:33:09,820 - ai_generation - INFO - Prompt Generated [OK]
+2026-07-13 23:33:09,820 - ai_generation - INFO - Groq Request Sent
+2026-07-13 23:33:09,820 - ai_generation - INFO - Groq API call initiated (Attempt 1/4). Prompt length: 1685
+2026-07-13 23:33:11,820 - ai_generation - INFO - Groq Response Received
+2026-07-13 23:33:11,820 - ai_generation - INFO - Groq Response Received [OK]
+2026-07-13 23:33:11,820 - ai_generation - INFO - Starting JSON validation check
+2026-07-13 23:33:11,820 - ai_generation - INFO - JSON response schema validated successfully
+2026-07-13 23:33:11,821 - ai_generation - INFO - JSON Validated
+2026-07-13 23:33:11,821 - ai_generation - INFO - JSON Valid [OK]
+2026-07-13 23:33:11,821 - ai_generation - INFO - Normalizing and mapping resource URLs for topics
+2026-07-13 23:33:11,821 - ai_generation - INFO - Finished resource mapping. Updated resources for 14 items.
+2026-07-13 23:33:11,821 - ai_generation - INFO - AI Roadmap generation pipeline executed successfully using Groq
+2026-07-13 23:33:11,826 - ai_generation - INFO - Roadmap Created
+2026-07-13 23:33:11,826 - ai_generation - INFO - Roadmap ID: 103
+2026-07-13 23:33:11,862 - ai_generation - INFO - Phase Count: 3
+2026-07-13 23:33:11,862 - ai_generation - INFO - Topic Count: 5
+2026-07-13 23:33:11,863 - ai_generation - INFO - Roadmap Created
+2026-07-13 23:33:11,866 - ai_generation - INFO - Roadmap ID: 104
+2026-07-13 23:33:11,914 - ai_generation - INFO - Phase Count: 2
+2026-07-13 23:33:11,914 - ai_generation - INFO - Topic Count: 4
+2026-07-13 23:33:11,941 - ai_generation - INFO - Roadmap Saved ✓
+2026-07-13 23:33:11,997 - ai_generation - INFO - Phase Count: 3
+2026-07-13 23:33:12,014 - ai_generation - INFO - Topic Count: 5
+2026-07-13 23:33:12,015 - ai_generation - INFO - selected_roadmap_id: 103
+2026-07-13 23:33:12,015 - ai_generation - INFO - Progress %: 0.00%
+2026-07-13 23:33:12,040 - ai_generation - INFO - Generation status successfully set to READY for user 38
+2026-07-13 23:33:44,947 - ai_generation - INFO - Background roadmap generation worker started for user 38
+2026-07-13 23:33:44,952 - ai_generation - INFO - AI Roadmap generation pipeline execution started using Groq
+2026-07-13 23:33:44,953 - ai_generation - INFO - Building optimized prompt using user profile data
+2026-07-13 23:33:44,954 - ai_generation - INFO - AI prompt built. Prompt text length: 1714
+2026-07-13 23:33:44,954 - ai_generation - INFO - Prompt Generated [OK]
+2026-07-13 23:33:44,955 - ai_generation - INFO - Groq Request Sent
+2026-07-13 23:33:44,955 - ai_generation - INFO - Groq API call initiated (Attempt 1/4). Prompt length: 1714
+2026-07-13 23:33:47,311 - ai_generation - INFO - Groq Response Received
+2026-07-13 23:33:47,311 - ai_generation - INFO - Groq Response Received [OK]
+2026-07-13 23:33:47,312 - ai_generation - INFO - Starting JSON validation check
+2026-07-13 23:33:47,312 - ai_generation - INFO - JSON response schema validated successfully
+2026-07-13 23:33:47,312 - ai_generation - INFO - JSON Validated
+2026-07-13 23:33:47,313 - ai_generation - INFO - JSON Valid [OK]
+2026-07-13 23:33:47,313 - ai_generation - INFO - Normalizing and mapping resource URLs for topics
+2026-07-13 23:33:47,313 - ai_generation - INFO - Finished resource mapping. Updated resources for 20 items.
+2026-07-13 23:33:47,315 - ai_generation - INFO - AI Roadmap generation pipeline executed successfully using Groq
+2026-07-13 23:33:47,325 - ai_generation - INFO - Roadmap Created
+2026-07-13 23:33:47,325 - ai_generation - INFO - Roadmap ID: 105
+2026-07-13 23:33:47,347 - ai_generation - INFO - Phase Count: 3
+2026-07-13 23:33:47,347 - ai_generation - INFO - Topic Count: 6
+2026-07-13 23:33:47,349 - ai_generation - INFO - Roadmap Created
+2026-07-13 23:33:47,349 - ai_generation - INFO - Roadmap ID: 106
+2026-07-13 23:33:47,383 - ai_generation - INFO - Phase Count: 3
+2026-07-13 23:33:47,383 - ai_generation - INFO - Topic Count: 6
+2026-07-13 23:33:47,401 - ai_generation - INFO - Roadmap Saved ✓
+2026-07-13 23:33:47,438 - ai_generation - INFO - Phase Count: 3
+2026-07-13 23:33:47,438 - ai_generation - INFO - Topic Count: 6
+2026-07-13 23:33:47,438 - ai_generation - INFO - selected_roadmap_id: 105
+2026-07-13 23:33:47,442 - ai_generation - INFO - Progress %: 0.00%
+2026-07-13 23:33:47,465 - ai_generation - INFO - Generation status successfully set to READY for user 38
+2026-07-13 23:37:09,335 - ai_generation - INFO - Background roadmap generation worker started for user 50
+2026-07-13 23:37:09,338 - ai_generation - INFO - AI Roadmap generation pipeline execution started using Groq
+2026-07-13 23:37:09,338 - ai_generation - INFO - Building optimized prompt using user profile data
+2026-07-13 23:37:09,338 - ai_generation - INFO - AI prompt built. Prompt text length: 1275
+2026-07-13 23:37:09,338 - ai_generation - INFO - Prompt Generated [OK]
+2026-07-13 23:37:09,338 - ai_generation - INFO - Groq Request Sent
+2026-07-13 23:37:09,338 - ai_generation - INFO - Groq API call initiated (Attempt 1/4). Prompt length: 1275
+2026-07-13 23:37:11,494 - ai_generation - INFO - Groq Response Received
+2026-07-13 23:37:11,494 - ai_generation - INFO - Groq Response Received [OK]
+2026-07-13 23:37:11,494 - ai_generation - INFO - Starting JSON validation check
+2026-07-13 23:37:11,495 - ai_generation - INFO - JSON response schema validated successfully
+2026-07-13 23:37:11,495 - ai_generation - INFO - JSON Validated
+2026-07-13 23:37:11,495 - ai_generation - INFO - JSON Valid [OK]
+2026-07-13 23:37:11,495 - ai_generation - INFO - Normalizing and mapping resource URLs for topics
+2026-07-13 23:37:11,495 - ai_generation - INFO - Finished resource mapping. Updated resources for 16 items.
+2026-07-13 23:37:11,496 - ai_generation - INFO - AI Roadmap generation pipeline executed successfully using Groq
+2026-07-13 23:37:11,504 - ai_generation - INFO - Roadmap Created
+2026-07-13 23:37:11,505 - ai_generation - INFO - Roadmap ID: 107
+2026-07-13 23:37:11,514 - ai_generation - INFO - Phase Count: 3
+2026-07-13 23:37:11,515 - ai_generation - INFO - Topic Count: 8
+2026-07-13 23:37:11,516 - ai_generation - INFO - Roadmap Created
+2026-07-13 23:37:11,516 - ai_generation - INFO - Roadmap ID: 108
+2026-07-13 23:37:11,525 - ai_generation - INFO - Phase Count: 3
+2026-07-13 23:37:11,525 - ai_generation - INFO - Topic Count: 8
+2026-07-13 23:37:11,536 - ai_generation - INFO - Roadmap Saved ✓
+2026-07-13 23:37:11,555 - ai_generation - INFO - Phase Count: 3
+2026-07-13 23:37:11,555 - ai_generation - INFO - Topic Count: 8
+2026-07-13 23:37:11,555 - ai_generation - INFO - selected_roadmap_id: 107
+2026-07-13 23:37:11,555 - ai_generation - INFO - Progress %: 0.00%
+2026-07-13 23:37:11,567 - ai_generation - INFO - Generation status successfully set to READY for user 50
+2026-07-13 23:46:54,591 - ai_generation - INFO - AI Roadmap generation pipeline execution started using Groq
+2026-07-13 23:46:54,591 - ai_generation - INFO - Building optimized prompt using user profile data
+2026-07-13 23:46:54,591 - ai_generation - INFO - AI prompt built. Prompt text length: 1714
+2026-07-13 23:46:54,591 - ai_generation - INFO - Prompt Generated [OK]
+2026-07-13 23:46:54,591 - ai_generation - INFO - Groq Request Sent
+2026-07-13 23:46:54,592 - ai_generation - INFO - Groq API call initiated (Attempt 1/4). Prompt length: 1714
+2026-07-13 23:46:58,157 - ai_generation - INFO - Groq Response Received
+2026-07-13 23:46:58,158 - ai_generation - INFO - Groq Response Received [OK]
+2026-07-13 23:46:58,158 - ai_generation - INFO - Starting JSON validation check
+2026-07-13 23:46:58,158 - ai_generation - INFO - JSON response schema validated successfully
+2026-07-13 23:46:58,158 - ai_generation - INFO - JSON Validated
+2026-07-13 23:46:58,158 - ai_generation - INFO - JSON Valid [OK]
+2026-07-13 23:46:58,159 - ai_generation - INFO - Normalizing and mapping resource URLs for topics
+2026-07-13 23:46:58,159 - ai_generation - INFO - Finished resource mapping. Updated resources for 13 items.
+2026-07-13 23:46:58,159 - ai_generation - INFO - AI Roadmap generation pipeline executed successfully using Groq
+2026-07-13 23:47:04,627 - ai_generation - INFO - AI Roadmap generation pipeline execution started using Groq
+2026-07-13 23:47:04,627 - ai_generation - INFO - Building optimized prompt using user profile data
+2026-07-13 23:47:04,628 - ai_generation - INFO - AI prompt built. Prompt text length: 1714
+2026-07-13 23:47:04,628 - ai_generation - INFO - Prompt Generated [OK]
+2026-07-13 23:47:04,628 - ai_generation - INFO - Groq Request Sent
+2026-07-13 23:47:04,629 - ai_generation - INFO - Groq API call initiated (Attempt 1/4). Prompt length: 1714
+2026-07-13 23:47:07,349 - ai_generation - INFO - Groq Response Received
+2026-07-13 23:47:07,350 - ai_generation - INFO - Groq Response Received [OK]
+2026-07-13 23:47:07,350 - ai_generation - INFO - Starting JSON validation check
+2026-07-13 23:47:07,351 - ai_generation - INFO - JSON response schema validated successfully
+2026-07-13 23:47:07,351 - ai_generation - INFO - JSON Validated
+2026-07-13 23:47:07,351 - ai_generation - INFO - JSON Valid [OK]
+2026-07-13 23:47:07,351 - ai_generation - INFO - Normalizing and mapping resource URLs for topics
+2026-07-13 23:47:07,352 - ai_generation - INFO - Finished resource mapping. Updated resources for 10 items.
+2026-07-13 23:47:07,352 - ai_generation - INFO - AI Roadmap generation pipeline executed successfully using Groq
