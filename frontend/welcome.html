@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PathForge - Welcome</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Custom style sheet -->
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .welcome-card {
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            background: #FFFFFF;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            cursor: pointer;
+            height: 100%;
+        }
+        .welcome-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--card-shadow-hover);
+            border-color: var(--primary-color);
+        }
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg border-bottom px-4" style="background-color: var(--primary-color);">
+        <a class="navbar-brand brand-logo text-white m-0 p-0" href="#">Path<span style="color: #60A5FA;">Forge</span></a>
+        <div class="ms-auto flex-row d-flex align-items-center">
+            <button class="btn btn-sm btn-outline-light rounded-pill px-3" id="logoutBtn">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container py-5 my-5">
+        <div class="row mb-5 text-center">
+            <div class="col-lg-8 mx-auto">
+                <h1 class="fw-extrabold mb-3" style="color: var(--text-color); font-weight: 800; letter-spacing: -0.5px;">What would you like to do today?</h1>
+                <p class="text-muted fs-5">Select a path to start your customized preparation and learning journey.</p>
+            </div>
+        </div>
+
+        <div class="row g-4 justify-content-center">
+            <!-- Card 1 -->
+            <div class="col-md-4">
+                <div class="card welcome-card p-4 text-center d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="card-icon">🎯</div>
+                        <h4 class="fw-bold mb-3">Build My Learning Roadmap</h4>
+                        <p class="text-muted mb-4">I already know my career goal and want a personalized learning roadmap.</p>
+                    </div>
+                    <div>
+                        <a href="questionnaire.html" class="btn btn-primary w-100 py-2 rounded-pill fw-semibold">Start</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="col-md-4">
+                <div class="card welcome-card p-4 text-center d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="card-icon">🔍</div>
+                        <h4 class="fw-bold mb-3">Career Discovery</h4>
+                        <p class="text-muted mb-4">I am not sure which career suits me. Help me decide.</p>
+                    </div>
+                    <div>
+                        <a href="career_quiz.html" class="btn btn-primary w-100 py-2 rounded-pill fw-semibold">Discover Career</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="col-md-4">
+                <div class="card welcome-card p-4 text-center d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="card-icon">💼</div>
+                        <h4 class="fw-bold mb-3">Placement Preparation</h4>
+                        <p class="text-muted mb-4">Prepare for campus placements with a structured roadmap.</p>
+                    </div>
+                    <div>
+                        <a href="placement_questionnaire.html" class="btn btn-primary w-100 py-2 rounded-pill fw-semibold">Start Placement Prep</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/welcome.js"></script>
+</body>
+</html>

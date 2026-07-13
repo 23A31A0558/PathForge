@@ -1,59 +1,353 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PathForge - Questionnaire</title>
+    <title>PathForge - Personalize Your Path</title>
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Custom style sheet -->
     <link rel="stylesheet" href="css/style.css">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
         .question-section {
             background: #fff;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
             margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
         }
+
         .form-check-input:checked {
-            background-color: var(--accent-color);
-            border-color: var(--accent-color);
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .option-box {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            padding-left: 2.75rem;
+            user-select: none;
+        }
+
+        .option-box:hover:not(.disabled) {
+            background-color: var(--primary-light);
+            border-color: var(--primary-color);
+        }
+
+        .option-box.selected {
+            background-color: var(--primary-light);
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.06);
+        }
+
+        .option-box.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            right: 1.25rem;
+            transform: translateY(-50%) scale(1);
+            color: var(--primary-color);
+            font-weight: 800;
+            font-size: 1.2rem;
+            animation: popCheck 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popCheck {
+            0% {
+                transform: translateY(-50%) scale(0);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translateY(-50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .option-box.disabled {
+            opacity: 0.4;
+            cursor: not-allowed !important;
+            border-color: var(--border-color) !important;
+            background-color: #f8fafc !important;
+        }
+
+        .option-box .form-check-input {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            margin-top: 0;
+            pointer-events: none;
+        }
+
+        .option-box .form-check-label {
+            cursor: pointer;
+            display: block;
+            width: 100%;
+            pointer-events: none;
+        }
+
+        .single-select-group .form-check-input {
+            display: none;
+        }
+
+        .single-select-group .option-box {
+            padding-left: 1.25rem;
         }
     </style>
 </head>
+
 <body>
     <nav class="navbar navbar-expand-lg border-bottom px-4" style="background-color: var(--primary-color);">
-        <a class="navbar-brand brand-logo text-white m-0 p-0" href="#">Path<span style="color: var(--accent-color);">Forge</span></a>
+        <a class="navbar-brand brand-logo text-white m-0 p-0" href="#">Path<span
+                style="color: #60A5FA;">Forge</span></a>
         <div class="ms-auto flex-row d-flex align-items-center">
-            <button class="btn btn-sm btn-outline-light" id="logoutBtn">Logout</button>
+            <a href="welcome.html" class="btn btn-sm btn-outline-light rounded-pill px-3 me-2">Back</a>
+            <button class="btn btn-sm btn-outline-light rounded-pill px-3" id="logoutBtn">Logout</button>
         </div>
     </nav>
 
-    <div class="container mt-5 mb-5" style="max-width: 700px;">
+    <div class="container mt-5 mb-5" style="max-width: 800px;">
         <div class="text-center mb-5">
-            <h2>Personalize Your Path</h2>
-            <p class="text-muted">Tell us a bit about yourself so we can tailor your learning experience.</p>
+            <h2 class="fw-bold" style="color: var(--primary-color);">Personalize Your Career Path</h2>
+            <p class="text-muted">Tell us about your background and goals so we can build your roadmap.</p>
         </div>
 
-        <form id="questionnaireForm">
-            <div id="questionsContainer">
-                <div class="text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
+        <form id="roadmapQuestionnaireForm" class="needs-validation" novalidate>
+            <!-- Part 1: Personal Details -->
+            <div class="question-section">
+                <h4 class="fw-bold mb-4" style="color: var(--primary-color);">1. Personal Details</h4>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="inputName" class="form-label fw-semibold text-secondary">Full Name <span
+                                class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="inputName">
+                        <div class="invalid-feedback">Please enter your name.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputCollege" class="form-label fw-semibold text-secondary">College/University <span
+                                class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="inputCollege" required>
+                        <div class="invalid-feedback">Please enter your college name.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputYear" class="form-label fw-semibold text-secondary">Year of Study <span
+                                class="text-danger">*</span></label>
+                        <select class="form-select" id="inputYear" required>
+                            <option value="" disabled selected>Select Year</option>
+                            <option value="1st Year">1st Year</option>
+                            <option value="2nd Year">2nd Year</option>
+                            <option value="3rd Year">3rd Year</option>
+                            <option value="4th Year">4th Year</option>
+                        </select>
+                        <div class="invalid-feedback">Please select your year.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputBranch" class="form-label fw-semibold text-secondary">Branch/Specialization
+                            <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="inputBranch" required
+                            placeholder="Computer Science / IT">
+                        <div class="invalid-feedback">Please enter your branch.</div>
                     </div>
                 </div>
             </div>
 
-            <div id="formError" class="alert alert-danger d-none" role="alert">
-                Please answer all questions before submitting.
+            <!-- Part 2: Programming Languages -->
+            <div class="question-section">
+                <h4 class="fw-bold mb-2" style="color: var(--primary-color);">2. Programming Languages</h4>
+                <p class="text-muted small mb-4">Select the languages you have worked with or want to learn.</p>
+                <div class="row g-2">
+                    <div class="col-md-4 col-6">
+                        <div class="form-check option-box">
+                            <input class="form-check-input" type="checkbox" name="languages" id="lang_py"
+                                value="Python">
+                            <label class="form-check-label fw-semibold text-secondary" for="lang_py">Python</label>
+                        </div>
+                        <div class="form-check option-box">
+                            <input class="form-check-input" type="checkbox" name="languages" id="lang_java"
+                                value="Java">
+                            <label class="form-check-label fw-semibold text-secondary" for="lang_java">Java</label>
+                        </div>
+                        <div class="form-check option-box">
+                            <input class="form-check-input" type="checkbox" name="languages" id="lang_c" value="C">
+                            <label class="form-check-label fw-semibold text-secondary" for="lang_c">C</label>
+                        </div>
+                        <div class="form-check option-box">
+                            <input class="form-check-input" type="checkbox" name="languages" id="lang_cpp" value="C++">
+                            <label class="form-check-label fw-semibold text-secondary" for="lang_cpp">C++</label>
+                        </div>
+                        <div class="form-check option-box">
+                            <input class="form-check-input" type="checkbox" name="languages" id="lang_js"
+                                value="JavaScript">
+                            <label class="form-check-label fw-semibold text-secondary" for="lang_js">JavaScript</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-6">
+                        <div class="form-check option-box">
+                            <input class="form-check-input" type="checkbox" name="languages" id="lang_ts"
+                                value="TypeScript">
+                            <label class="form-check-label fw-semibold text-secondary" for="lang_ts">TypeScript</label>
+                        </div>
+                        <div class="form-check option-box">
+                            <input class="form-check-input" type="checkbox" name="languages" id="lang_go" value="Go">
+                            <label class="form-check-label fw-semibold text-secondary" for="lang_go">Go</label>
+                        </div>
+                        <div class="form-check option-box">
+                            <input class="form-check-input" type="checkbox" name="languages" id="lang_kotlin"
+                                value="Kotlin">
+                            <label class="form-check-label fw-semibold text-secondary" for="lang_kotlin">Kotlin</label>
+                        </div>
+                        <div class="form-check option-box">
+                            <input class="form-check-input" type="checkbox" name="languages" id="lang_swift"
+                                value="Swift">
+                            <label class="form-check-label fw-semibold text-secondary" for="lang_swift">Swift</label>
+                        </div>
+                        <div class="form-check option-box">
+                            <input class="form-check-input" type="checkbox" name="languages" id="lang_php" value="PHP">
+                            <label class="form-check-label fw-semibold text-secondary" for="lang_php">PHP</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-6">
+                        <div class="form-check option-box">
+                            <input class="form-check-input" type="checkbox" name="languages" id="lang_sql" value="SQL">
+                            <label class="form-check-label fw-semibold text-secondary" for="lang_sql">SQL</label>
+                        </div>
+                        <div class="form-check option-box">
+                            <input class="form-check-input" type="checkbox" name="languages" id="lang_rust"
+                                value="Rust">
+                            <label class="form-check-label fw-semibold text-secondary" for="lang_rust">Rust</label>
+                        </div>
+                        <div class="form-check option-box">
+                            <input class="form-check-input" type="checkbox" name="languages" id="lang_dart"
+                                value="Dart">
+                            <label class="form-check-label fw-semibold text-secondary" for="lang_dart">Dart</label>
+                        </div>
+                        <div class="form-check option-box">
+                            <input class="form-check-input" type="checkbox" name="languages" id="lang_none"
+                                value="I don't know any programming language">
+                            <label class="form-check-label fw-semibold text-secondary" for="lang_none">I don't know any
+                                programming language</label>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <button type="submit" class="btn btn-primary w-100 py-2 fs-5 mt-3 d-none" id="submitBtn">Generate My Path</button>
+            <!-- Part 3: Career Goal -->
+            <div class="question-section">
+                <h4 class="fw-bold mb-4" style="color: var(--primary-color);">3. Primary Career Goal</h4>
+                <div class="mb-3">
+                    <label for="inputCareerGoal" class="form-label fw-semibold text-secondary">Target Role <span
+                            class="text-danger">*</span></label>
+                    <select class="form-select" id="inputCareerGoal" required>
+                        <option value="" disabled selected>Select Role</option>
+                        <option value="Backend Developer">Backend Developer</option>
+                        <option value="Frontend Developer">Frontend Developer</option>
+                        <option value="Full Stack Developer">Full Stack Developer</option>
+                        <option value="AI / Machine Learning Engineer">AI / Machine Learning Engineer</option>
+                        <option value="Data Scientist">Data Scientist</option>
+                        <option value="Data Analyst">Data Analyst</option>
+                        <option value="Cyber Security Engineer">Cyber Security Engineer</option>
+                        <option value="Cloud Engineer">Cloud Engineer</option>
+                        <option value="DevOps Engineer">DevOps Engineer</option>
+                        <option value="Mobile App Developer">Mobile App Developer</option>
+                        <option value="Game Developer">Game Developer</option>
+                        <option value="UI / UX Designer">UI / UX Designer</option>
+                        <option value="Software Engineer">Software Engineer</option>
+                        <option value="Blockchain Developer">Blockchain Developer</option>
+                        <option value="Embedded Systems Engineer">Embedded Systems Engineer</option>
+                        <option value="I am not sure">I am not sure</option>
+                    </select>
+                    <div class="invalid-feedback">Please select your primary career goal.</div>
+                </div>
+            </div>
+
+            <!-- Part 4: Skill Level -->
+            <div class="question-section single-select-group">
+                <h4 class="fw-bold mb-4" style="color: var(--primary-color);">4. Current Skill Level</h4>
+                <div class="d-flex flex-column gap-2">
+                    <div class="form-check option-box">
+                        <input class="form-check-input" type="radio" name="skill_level" id="skill_beg" value="Beginner"
+                            required>
+                        <label class="form-check-label fw-semibold text-secondary" for="skill_beg">Beginner (Little to
+                            no experience)</label>
+                    </div>
+                    <div class="form-check option-box">
+                        <input class="form-check-input" type="radio" name="skill_level" id="skill_basic"
+                            value="Basic Knowledge" required>
+                        <label class="form-check-label fw-semibold text-secondary" for="skill_basic">Basic Knowledge
+                            (Understand variables and core logic)</label>
+                    </div>
+                    <div class="form-check option-box">
+                        <input class="form-check-input" type="radio" name="skill_level" id="skill_int"
+                            value="Intermediate" required>
+                        <label class="form-check-label fw-semibold text-secondary" for="skill_int">Intermediate (Can
+                            build simple scripts or projects)</label>
+                    </div>
+                    <div class="form-check option-box">
+                        <input class="form-check-input" type="radio" name="skill_level" id="skill_adv" value="Advanced"
+                            required>
+                        <label class="form-check-label fw-semibold text-secondary" for="skill_adv">Advanced (Can build
+                            complex multi-layered applications)</label>
+                    </div>
+                    <div class="text-danger small mt-2 d-none" id="skillLevelError">Please select your skill level.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Part 5: Daily learning time & Target timeline -->
+            <div class="question-section">
+                <h4 class="fw-bold mb-4" style="color: var(--primary-color);">5. Availability and Timeline</h4>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label for="inputDailyTime" class="form-label fw-semibold text-secondary">Daily Learning Time
+                            <span class="text-danger">*</span></label>
+                        <select class="form-select" id="inputDailyTime" required>
+                            <option value="" disabled selected>Select Daily Time</option>
+                            <option value="Less than 1 Hour">Less than 1 Hour</option>
+                            <option value="1-2 Hours">1-2 Hours</option>
+                            <option value="2-4 Hours">2-4 Hours</option>
+                            <option value="More than 4 Hours">More than 4 Hours</option>
+                        </select>
+                        <div class="invalid-feedback">Please select your daily time availability.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputTimeline" class="form-label fw-semibold text-secondary">Target Completion
+                            Timeline <span class="text-danger">*</span></label>
+                        <select class="form-select" id="inputTimeline" required>
+                            <option value="" disabled selected>Select Timeline</option>
+                            <option value="3 Months">3 Months</option>
+                            <option value="6 Months">6 Months</option>
+                            <option value="1 Year">1 Year</option>
+                            <option value="No Specific Timeline">No Specific Timeline</option>
+                        </select>
+                        <div class="invalid-feedback">Please select your target timeline.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="formError" class="alert alert-danger d-none" role="alert"></div>
+
+            <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold text-uppercase fs-5"
+                id="submitBtn">Generate Roadmap Base</button>
         </form>
     </div>
 
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/questionnaire.js"></script>
 </body>
+
 </html>

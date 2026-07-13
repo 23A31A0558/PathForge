@@ -8,3 +8,7 @@ python-multipart
 psycopg2-binary
 python-dotenv
 gunicorn
+groq
+email-validator
+requests
+httpx

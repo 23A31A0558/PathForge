@@ -41,6 +41,7 @@
                 <a href="leaderboard.html" class="text-white text-decoration-none">Leaderboard</a>
                 <a href="friends.html" class="text-white text-decoration-none">Friends</a>
                 <a href="groups.html" class="text-white text-decoration-none">Groups</a>
+                <a href="placement_dashboard.html" class="text-white text-decoration-none">Placement Preparation</a>
                 <span class="text-white d-none d-lg-inline fw-semibold mx-2" id="userDisplay">...</span>
                 <button class="btn btn-sm btn-outline-light rounded-pill" id="logoutBtn">Logout</button>
             </div>
@@ -51,7 +52,16 @@
         <div class="row mb-5">
             <div class="col-12 text-center">
                 <h1 class="fw-bold" style="color: var(--primary-color);">Welcome back, <span id="welcomeName" style="color: var(--accent-color);">Explorer</span>!</h1>
-                <p class="text-muted fs-5">Here is a quick overview of your journey.</p>
+                <p class="text-muted fs-5 mb-3">Here is a quick overview of your journey.</p>
+                <div class="dropdown d-inline-block mt-2">
+                    <span class="fw-semibold text-secondary me-2">Current Learning Journey:</span>
+                    <button class="btn btn-outline-primary dropdown-toggle rounded-pill px-4 fw-bold shadow-sm" type="button" id="trackSwitcherBtn" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.9rem;">
+                        Loading...
+                    </button>
+                    <ul class="dropdown-menu shadow border-light" id="trackSwitcherMenu" aria-labelledby="trackSwitcherBtn">
+                        <!-- Dynamic items -->
+                    </ul>
+                </div>
             </div>
         </div>
 
@@ -97,6 +107,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/api.js?v=2"></script>
     <script src="js/auth.js?v=2"></script>
+    <script src="js/journey_manager.js?v=2"></script>
     <script src="js/dashboard.js?v=2"></script>
 </body>
 </html>

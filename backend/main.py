@@ -1,4 +1,65 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+import sys
+
+# 1. Verify dependencies at startup
+REQUIRED_MODULES = [
+    ("dotenv", "python-dotenv"),
+    ("groq", "groq"),
+    ("fastapi", "fastapi"),
+    ("uvicorn", "uvicorn"),
+    ("sqlalchemy", "sqlalchemy"),
+    ("jose", "python-jose"),
+    ("passlib", "passlib[bcrypt]"),
+    ("pydantic", "pydantic"),
+    ("email_validator", "email-validator"),
+    ("requests", "requests"),
+    ("httpx", "httpx"),
+]
+
+missing_modules = []
+for module_name, package_name in REQUIRED_MODULES:
+    try:
+        __import__(module_name)
+    except ImportError:
+        missing_modules.append(package_name)
+
+if missing_modules:
+    print("*" * 80, file=sys.stderr)
+    print(" CRITICAL ERROR: Missing required python packages for PathForge startup:", file=sys.stderr)
+    for pkg in missing_modules:
+        print(f" - {pkg}", file=sys.stderr)
+    print(" Please install them using: pip install -r requirements.txt", file=sys.stderr)
+    print("*" * 80, file=sys.stderr)
+    sys.exit(1)
+
+import os
+from typing import List, Optional, Dict, Any, Union
+import datetime
+import time
+import logging
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Verify GROQ_API_KEY exists (Warning only, do not crash server)
+groq_key = os.getenv("GROQ_API_KEY")
+if not groq_key:
+    print("WARNING: GROQ_API_KEY is not set in environment or .env file. AI Roadmap generation will fail with a clean error response.", file=sys.stderr)
+
+# Setup logger
+backend_logger = logging.getLogger("backend")
+if not backend_logger.handlers:
+    backend_logger.setLevel(logging.INFO)
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
+    backend_logger.addHandler(ch)
+
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func
@@ -7,7 +68,107 @@ from database import engine
 
 models.Base.metadata.create_all(bind=engine)
 
+# Apply migrations for missing columns
+try:
+    with engine.begin() as conn:
+        # Check and add selected_roadmap_id
+        try:
+            conn.execute(text("SELECT selected_roadmap_id FROM users LIMIT 1"))
+        except Exception:
+            conn.execute(text("ALTER TABLE users ADD COLUMN selected_roadmap_id INTEGER DEFAULT NULL"))
+            
+        # Check and add questionnaire_completed
+        try:
+            conn.execute(text("SELECT questionnaire_completed FROM users LIMIT 1"))
+        except Exception:
+            conn.execute(text("ALTER TABLE users ADD COLUMN questionnaire_completed BOOLEAN DEFAULT 0"))
+
+        # Check and add onboarding_completed
+        try:
+            conn.execute(text("SELECT onboarding_completed FROM users LIMIT 1"))
+        except Exception:
+            conn.execute(text("ALTER TABLE users ADD COLUMN onboarding_completed BOOLEAN DEFAULT 0"))
+
+        # Check and add is_archived to roadmaps
+        try:
+            conn.execute(text("SELECT is_archived FROM roadmaps LIMIT 1"))
+        except Exception:
+            conn.execute(text("ALTER TABLE roadmaps ADD COLUMN is_archived BOOLEAN DEFAULT 0"))
+
+        # Check and add description to roadmaps
+        try:
+            conn.execute(text("SELECT description FROM roadmaps LIMIT 1"))
+        except Exception:
+            conn.execute(text("ALTER TABLE roadmaps ADD COLUMN description TEXT DEFAULT NULL"))
+
+        # Check and add created_at to roadmaps
+        try:
+            conn.execute(text("SELECT created_at FROM roadmaps LIMIT 1"))
+        except Exception:
+            conn.execute(text("ALTER TABLE roadmaps ADD COLUMN created_at DATETIME DEFAULT NULL"))
+
+        # Check and add generated_by_ai to roadmaps
+        try:
+            conn.execute(text("SELECT generated_by_ai FROM roadmaps LIMIT 1"))
+        except Exception:
+            conn.execute(text("ALTER TABLE roadmaps ADD COLUMN generated_by_ai BOOLEAN DEFAULT 1"))
+except Exception as migration_err:
+    print(f"Migration error: {migration_err}", sys.stderr)
+
 app = FastAPI(title="PathForge API")
+
+# HTTP logging middleware
+@app.middleware("http")
+async def log_requests(request, call_next):
+    backend_logger.info(f"Incoming request: {request.method} {request.url.path}")
+    start_time = time.time()
+    try:
+        response = await call_next(request)
+        duration = time.time() - start_time
+        backend_logger.info(f"Response status: {response.status_code} for {request.method} {request.url.path} (Duration: {duration:.4f}s)")
+        return response
+    except Exception as e:
+        duration = time.time() - start_time
+        backend_logger.error(f"Exception during request {request.method} {request.url.path}: {str(e)} (Duration: {duration:.4f}s)")
+        raise e
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request, exc):
+    import logging
+    logging.getLogger("backend").warning(f"HTTPException caught: {exc.detail} (Status: {exc.status_code})")
+    detail_msg = exc.detail
+    if exc.status_code == 404:
+        detail_msg = "Endpoint not found"
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": detail_msg, "success": False, "message": detail_msg}
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    import logging
+    logging.getLogger("backend").warning(f"RequestValidationError caught: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "success": False, "message": "Validation error"}
+    )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    import logging
+    import traceback
+    logging.getLogger("backend").error(f"CRITICAL: Unhandled Exception: {str(exc)}")
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal server error",
+            "success": False,
+            "message": "Internal server error",
+            "details": str(exc)
+        }
+    )
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -38,16 +199,60 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 @app.post("/register", response_model=schemas.UserResponse)
 def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
-    db_user = db.query(models.User).filter(models.User.email == user.email).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+    import logging
+    import traceback
+    backend_logger = logging.getLogger("backend")
     
-    hashed_password = auth.get_password_hash(user.password)
-    new_user = models.User(username=user.username, email=user.email, hashed_password=hashed_password)
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
+    backend_logger.info(f"Incoming registration request: username={user.username}, email={user.email}")
+    
+    try:
+        # Check duplicate email
+        db_user_email = db.query(models.User).filter(models.User.email == user.email).first()
+        if db_user_email:
+            backend_logger.warning(f"Registration failed: Email {user.email} already registered.")
+            raise HTTPException(status_code=400, detail="Email already registered")
+            
+        # Check duplicate username
+        db_user_name = db.query(models.User).filter(models.User.username == user.username).first()
+        if db_user_name:
+            backend_logger.warning(f"Registration failed: Username {user.username} already exists.")
+            raise HTTPException(status_code=400, detail="Username already exists")
+            
+        # Password hashing
+        try:
+            hashed_password = auth.get_password_hash(user.password)
+        except Exception as hash_err:
+            backend_logger.error(f"Password hashing exception: {str(hash_err)}")
+            raise HTTPException(status_code=500, detail=f"Failed to secure password: {str(hash_err)}")
+            
+        # Create user
+        new_user = models.User(username=user.username, email=user.email, hashed_password=hashed_password)
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        
+        backend_logger.info(f"User {user.username} successfully registered with ID {new_user.id}")
+        return new_user
+        
+    except HTTPException as http_exc:
+        # Safe rollback
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        raise http_exc
+    except Exception as e:
+        # Safe rollback
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        backend_logger.error(f"Unexpected exception during registration: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Registration failed: {str(e)}"
+        )
 
 @app.post("/login", response_model=schemas.Token)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
@@ -102,13 +307,52 @@ def get_user_status(
 ):
     return {
         "questionnaire_completed": current_user.questionnaire_completed,
+        "onboarding_completed": current_user.onboarding_completed,
         "selected_roadmap_id": current_user.selected_roadmap_id
+    }
+
+@app.get("/roadmap/status", response_model=schemas.RoadmapStatusResponse)
+def get_roadmap_status(
+    current_user: models.User = Depends(read_users_me),
+    db: Session = Depends(database.get_db)
+):
+    status_rec = db.query(models.RoadmapGenerationStatus).filter(models.RoadmapGenerationStatus.user_id == current_user.id).first()
+    if status_rec:
+        return {
+            "status": status_rec.status,
+            "error_message": status_rec.error_message
+        }
+    
+    # Fallback to check if roadmap records exist
+    existing_roadmap = db.query(models.Roadmap).filter(models.Roadmap.user_id == current_user.id).first()
+    if existing_roadmap:
+        return {
+            "status": "READY",
+            "error_message": None
+        }
+        
+    return {
+        "status": "NOT_STARTED",
+        "error_message": None
     }
 
 @app.on_event("startup")
 def seed_database():
     db = database.SessionLocal()
     # Run self-healing sqlite migrations
+    try:
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS roadmap_generation_status (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER UNIQUE,
+                status VARCHAR,
+                error_message VARCHAR,
+                updated_at DATETIME
+            )
+        """))
+        db.commit()
+    except Exception:
+        pass
     try:
         db.execute(text("ALTER TABLE users ADD COLUMN selected_roadmap_id INTEGER"))
         db.commit()
@@ -120,7 +364,32 @@ def seed_database():
     except Exception:
         pass
     try:
+        db.execute(text("ALTER TABLE users ADD COLUMN onboarding_completed BOOLEAN DEFAULT 0"))
+        db.commit()
+    except Exception:
+        pass
+    try:
+        db.execute(text("UPDATE users SET onboarding_completed = 1 WHERE questionnaire_completed = 1"))
+        db.commit()
+    except Exception:
+        pass
+    try:
         db.execute(text("ALTER TABLE roadmaps ADD COLUMN is_archived BOOLEAN DEFAULT 0"))
+        db.commit()
+    except Exception:
+        pass
+    try:
+        db.execute(text("ALTER TABLE roadmaps ADD COLUMN description VARCHAR"))
+        db.commit()
+    except Exception:
+        pass
+    try:
+        db.execute(text("ALTER TABLE roadmaps ADD COLUMN created_at DATETIME"))
+        db.commit()
+    except Exception:
+        pass
+    try:
+        db.execute(text("ALTER TABLE roadmaps ADD COLUMN generated_by_ai BOOLEAN DEFAULT 1"))
         db.commit()
     except Exception:
         pass
@@ -237,6 +506,272 @@ def get_questions(db: Session = Depends(database.get_db)):
         result.append(q_dict)
     return result
 
+
+import json
+
+@app.post("/questionnaire")
+def save_roadmap_questionnaire(
+    body: schemas.RoadmapQuestionnaireCreate,
+    background_tasks: BackgroundTasks,
+    current_user: models.User = Depends(read_users_me),
+    db: Session = Depends(database.get_db)
+):
+    import logging
+    backend_logger = logging.getLogger("backend")
+    backend_logger.info(f"Questionnaire received for user_id={current_user.id}: {body.dict()}")
+    
+    # Check limit of active roadmaps
+    active_count = db.query(models.Roadmap).filter(models.Roadmap.user_id == current_user.id, models.Roadmap.is_archived == False).count()
+    if active_count >= 10:
+        raise HTTPException(
+            status_code=400,
+            detail="Maximum active roadmap limit reached (10). Please archive or delete an existing roadmap before adding a new one."
+        )
+        
+    try:
+        langs_str = ",".join(body.programming_languages) if body.programming_languages else ""
+        
+        skill_level = body.current_skill_level
+        if not body.programming_languages:
+            skill_level = "Beginner"
+            
+        new_q = db.query(models.RoadmapQuestionnaire).filter(models.RoadmapQuestionnaire.user_id == current_user.id).first()
+        if new_q:
+            new_q.name = body.name
+            new_q.college = body.college
+            new_q.year = body.year
+            new_q.branch = body.branch
+            new_q.programming_languages = langs_str
+            new_q.primary_career_goal = body.primary_career_goal
+            new_q.current_skill_level = skill_level
+            new_q.daily_learning_time = body.daily_learning_time
+            new_q.target_timeline = body.target_timeline
+        else:
+            new_q = models.RoadmapQuestionnaire(
+                user_id=current_user.id,
+                name=body.name,
+                college=body.college,
+                year=body.year,
+                branch=body.branch,
+                programming_languages=langs_str,
+                primary_career_goal=body.primary_career_goal,
+                current_skill_level=skill_level,
+                daily_learning_time=body.daily_learning_time,
+                target_timeline=body.target_timeline
+            )
+            db.add(new_q)
+        db.flush()
+        
+        # Mark onboarding and questionnaire as completed
+        current_user.onboarding_completed = True
+        current_user.questionnaire_completed = True
+        
+        # Initialize or reset roadmap status to GENERATING
+        status_rec = db.query(models.RoadmapGenerationStatus).filter(models.RoadmapGenerationStatus.user_id == current_user.id).first()
+        if not status_rec:
+            status_rec = models.RoadmapGenerationStatus(user_id=current_user.id, status="GENERATING")
+            db.add(status_rec)
+        else:
+            status_rec.status = "GENERATING"
+            status_rec.error_message = None
+        db.commit()
+        backend_logger.info("Questionnaire Saved ✓")
+
+        # Execute roadmap generation in the background
+        try:
+            backend_logger.info(f"Enqueuing background roadmap generation for user_id={current_user.id}")
+            roadmap_ai_service.generateRoadmapBackground(background_tasks, db, current_user.id)
+            backend_logger.info(f"Background roadmap generation enqueued. Client redirecting to roadmap dashboard.")
+        except Exception as background_err:
+            # Fallback update to FAILED if enqueuing fails
+            status_rec = db.query(models.RoadmapGenerationStatus).filter(models.RoadmapGenerationStatus.user_id == current_user.id).first()
+            if status_rec:
+                status_rec.status = "FAILED"
+                status_rec.error_message = f"Failed to enqueue task: {str(background_err)}"
+                db.commit()
+            backend_logger.error(f"Failed to start roadmap generation for user_id={current_user.id}: {str(background_err)}")
+            raise HTTPException(status_code=500, detail=f"Failed to start roadmap generation: {str(background_err)}")
+
+        return {"message": "Roadmap questionnaire saved and AI roadmap generation started in background."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        backend_logger.error(f"Failed to save questionnaire for user_id={current_user.id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to save questionnaire: {str(e)}")
+
+@app.get("/questionnaire", response_model=schemas.RoadmapQuestionnaireResponse)
+def get_roadmap_questionnaire(
+    current_user: models.User = Depends(read_users_me),
+    db: Session = Depends(database.get_db)
+):
+    q = db.query(models.RoadmapQuestionnaire).filter(models.RoadmapQuestionnaire.user_id == current_user.id).first()
+    if not q:
+        raise HTTPException(status_code=404, detail="Roadmap questionnaire not found.")
+    return q
+
+
+@app.post("/career-quiz", response_model=schemas.CareerQuizSubmitResponse)
+def save_career_quiz(
+    body: schemas.CareerQuizSubmit,
+    current_user: models.User = Depends(read_users_me),
+    db: Session = Depends(database.get_db)
+):
+    try:
+        # Prevent duplicates
+        db.query(models.CareerRecommendationQuiz).filter(models.CareerRecommendationQuiz.user_id == current_user.id).delete()
+        
+        careers = [
+            "Backend Developer", "Frontend Developer", "Full Stack Developer",
+            "AI / Machine Learning Engineer", "Data Scientist", "Data Analyst",
+            "Cyber Security Engineer", "Cloud Engineer", "DevOps Engineer",
+            "Mobile App Developer", "Game Developer", "UI / UX Designer",
+            "Software Engineer", "Blockchain Developer", "Embedded Systems Engineer"
+        ]
+        
+        scores = {c: 0 for c in careers}
+        
+        q1_map = {
+            "Problem Solving": ["Backend Developer", "Software Engineer", "AI / Machine Learning Engineer"],
+            "Designing Websites": ["Frontend Developer", "UI / UX Designer"],
+            "Training AI Models": ["AI / Machine Learning Engineer", "Data Scientist"],
+            "Finding Patterns in Data": ["Data Scientist", "Data Analyst"],
+            "Building Applications": ["Mobile App Developer", "Full Stack Developer", "Software Engineer"],
+            "Networking": ["Cloud Engineer", "Cyber Security Engineer", "DevOps Engineer"],
+            "Cyber Security": ["Cyber Security Engineer"],
+            "Cloud Infrastructure": ["Cloud Engineer", "DevOps Engineer"],
+            "Automating Tasks": ["DevOps Engineer", "Backend Developer"],
+            "Game Development": ["Game Developer"],
+            "Other": ["Software Engineer"]
+        }
+        
+        q2_map = {
+            "Mathematics": ["AI / Machine Learning Engineer", "Data Scientist"],
+            "Programming": ["Backend Developer", "Frontend Developer", "Software Engineer", "Mobile App Developer", "Full Stack Developer", "Blockchain Developer", "Embedded Systems Engineer"],
+            "Design": ["UI / UX Designer", "Frontend Developer"],
+            "Networking": ["Cloud Engineer", "DevOps Engineer", "Cyber Security Engineer"],
+            "Data": ["Data Scientist", "Data Analyst"],
+            "Cyber Security": ["Cyber Security Engineer"]
+        }
+        
+        q3_map = {
+            "Working with Data": ["Data Scientist", "Data Analyst", "AI / Machine Learning Engineer"],
+            "Logical Problem Solving": ["Backend Developer", "Software Engineer", "Blockchain Developer", "Embedded Systems Engineer"],
+            "Creativity": ["UI / UX Designer", "Frontend Developer", "Game Developer"],
+            "Infrastructure": ["Cloud Engineer", "DevOps Engineer", "Cyber Security Engineer"],
+            "Working with People": ["UI / UX Designer", "Software Engineer"],
+            "Research": ["AI / Machine Learning Engineer", "Data Scientist"]
+        }
+        
+        # Calculate
+        for act in body.activities:
+            if act in q1_map:
+                for c in q1_map[act]:
+                    scores[c] += 3
+                    
+        if body.subject in q2_map:
+            for c in q2_map[body.subject]:
+                scores[c] += 3
+                
+        if body.work_type in q3_map:
+            for c in q3_map[body.work_type]:
+                scores[c] += 3
+                
+        max_score = max(scores.values())
+        
+        # Scale proportionally so top gets 94% like the example
+        recommendations = []
+        for c, score in scores.items():
+            if score > 0:
+                scale_factor = 94.0 / max_score if max_score > 0 else 0
+                pct = min(100, max(0, int(score * scale_factor)))
+                recommendations.append({"career": c, "score_percentage": pct})
+            else:
+                recommendations.append({"career": c, "score_percentage": 0})
+                
+        # Sort and take top 3
+        recommendations = sorted(recommendations, key=lambda x: x["score_percentage"], reverse=True)[:3]
+        
+        # Default fallback
+        if not recommendations or max_score == 0:
+            recommendations = [
+                {"career": "Software Engineer", "score_percentage": 94},
+                {"career": "Backend Developer", "score_percentage": 88},
+                {"career": "Frontend Developer", "score_percentage": 75}
+            ]
+            
+        rec_json = json.dumps(recommendations)
+        acts_str = ",".join(body.activities)
+        
+        new_quiz = models.CareerRecommendationQuiz(
+            user_id=current_user.id,
+            activities=acts_str,
+            subject=body.subject,
+            work_type=body.work_type,
+            recommended_careers=rec_json
+        )
+        db.add(new_quiz)
+        db.commit()
+        
+        return {"recommendations": [schemas.RecommendedCareerScore(**r) for r in recommendations]}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to process career quiz: {str(e)}")
+
+@app.get("/career-quiz", response_model=schemas.CareerQuizResponse)
+def get_career_quiz(
+    current_user: models.User = Depends(read_users_me),
+    db: Session = Depends(database.get_db)
+):
+    q = db.query(models.CareerRecommendationQuiz).filter(models.CareerRecommendationQuiz.user_id == current_user.id).first()
+    if not q:
+        raise HTTPException(status_code=404, detail="Career recommendation quiz response not found.")
+    return q
+
+
+@app.post("/placement-profile")
+def save_placement_profile(
+    body: schemas.PlacementProfileCreate,
+    current_user: models.User = Depends(read_users_me),
+    db: Session = Depends(database.get_db)
+):
+    try:
+        # Prevent duplicates
+        db.query(models.PlacementProfile).filter(models.PlacementProfile.user_id == current_user.id).delete()
+        
+        companies_str = ",".join(body.target_companies) if body.target_companies else ""
+        
+        new_profile = models.PlacementProfile(
+            user_id=current_user.id,
+            name=body.name,
+            college=body.college,
+            year=body.year,
+            branch=body.branch,
+            aptitude_level=body.aptitude_level,
+            dsa_level=body.dsa_level,
+            target_companies=companies_str,
+            timeline=body.timeline
+        )
+        db.add(new_profile)
+        
+        current_user.onboarding_completed = True
+        db.commit()
+        return {"message": "Placement profile saved successfully."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to save placement profile: {str(e)}")
+
+@app.get("/placement-profile", response_model=schemas.PlacementProfileResponse)
+def get_placement_profile(
+    current_user: models.User = Depends(read_users_me),
+    db: Session = Depends(database.get_db)
+):
+    p = db.query(models.PlacementProfile).filter(models.PlacementProfile.user_id == current_user.id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Placement profile not found.")
+    return p
+
+
 @app.post("/answers")
 def submit_answers(
     answers_data: schemas.AnswerListCreate, 
@@ -266,73 +801,413 @@ def submit_answers(
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal server error while saving answers")
 
-import roadmap_logic
+import roadmap_ai_service
 
 @app.post("/generate-roadmap")
-def generate_roadmap(current_user: models.User = Depends(read_users_me), db: Session = Depends(database.get_db)):
-    print(f"DEBUG: Generating roadmap for {current_user.username}")
+@app.post("/roadmap/generate")
+def generate_roadmap(
+    background_tasks: BackgroundTasks,
+    current_user: models.User = Depends(read_users_me),
+    db: Session = Depends(database.get_db)
+):
+    if not os.getenv("GROQ_API_KEY"):
+        status_rec = db.query(models.RoadmapGenerationStatus).filter(models.RoadmapGenerationStatus.user_id == current_user.id).first()
+        if not status_rec:
+            status_rec = models.RoadmapGenerationStatus(user_id=current_user.id, status="FAILED", error_message="Missing Groq API Key")
+            db.add(status_rec)
+        else:
+            status_rec.status = "FAILED"
+            status_rec.error_message = "Missing Groq API Key"
+        db.commit()
+        raise HTTPException(status_code=400, detail="Missing Groq API Key")
+
+    # Verify questionnaire exists
+    questionnaire = db.query(models.RoadmapQuestionnaire).filter(models.RoadmapQuestionnaire.user_id == current_user.id).first()
+    if not questionnaire:
+        raise HTTPException(
+            status_code=400,
+            detail="Roadmap questionnaire not found. Please complete the questionnaire first."
+        )
+
+    # Verify active roadmap count < 10
+    active_count = db.query(models.Roadmap).filter(
+        models.Roadmap.user_id == current_user.id,
+        models.Roadmap.is_archived == False
+    ).count()
+    if active_count >= 10:
+        raise HTTPException(
+            status_code=400,
+            detail="Maximum active roadmap limit reached."
+        )
+        
+    status_rec = db.query(models.RoadmapGenerationStatus).filter(models.RoadmapGenerationStatus.user_id == current_user.id).first()
+    if status_rec and status_rec.status == "GENERATING":
+        return {"message": "Roadmap is currently generating.", "status": "GENERATING"}
+
+    if not status_rec:
+        status_rec = models.RoadmapGenerationStatus(user_id=current_user.id, status="GENERATING")
+        db.add(status_rec)
+    else:
+        status_rec.status = "GENERATING"
+        status_rec.error_message = None
+    db.commit()
+
     try:
-        # Trigger roadmap generation based on user answers
-        roadmap_logic.generate_roadmaps_for_user(db, current_user.id)
-        print("DEBUG: Roadmap generated successfully")
-        return {"message": "Roadmaps generated successfully."}
+        roadmap_ai_service.generateRoadmapBackground(background_tasks, db, current_user.id)
+        return {"message": "Roadmap generation started in background.", "status": "GENERATING"}
     except Exception as e:
-        print(f"ERROR in /generate-roadmap: {str(e)}")
-        db.rollback()
-        raise HTTPException(status_code=500, detail="Internal server error while generating roadmap")
+        status_rec = db.query(models.RoadmapGenerationStatus).filter(models.RoadmapGenerationStatus.user_id == current_user.id).first()
+        if status_rec:
+            status_rec.status = "FAILED"
+            status_rec.error_message = str(e)
+            db.commit()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/roadmap/suggestions", response_model=schemas.SuggestionsResponse)
+def get_suggestions(current_user: models.User = Depends(read_users_me), db: Session = Depends(database.get_db)):
+    suggestions = analyze_user_progress(db, current_user.id)
+    return {"suggestions": suggestions}
 
 @app.get("/roadmap", response_model=List[schemas.RoadmapResponse])
 def get_roadmap(current_user: models.User = Depends(read_users_me), db: Session = Depends(database.get_db)):
+    return roadmap_ai_service.loadRoadmap(db, current_user.id)
+
+@app.get("/roadmap/{id}", response_model=schemas.RoadmapResponse)
+def get_roadmap_by_id(id: int, current_user: models.User = Depends(read_users_me), db: Session = Depends(database.get_db)):
+    # Verify ownership
+    roadmap = db.query(models.Roadmap).filter(models.Roadmap.id == id).first()
+    if not roadmap:
+        raise HTTPException(status_code=404, detail="Roadmap not found")
+    if roadmap.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied: you do not own this roadmap")
+        
+    loaded = roadmap_ai_service.loadRoadmap(db, current_user.id, roadmap_id=id)
+    if not loaded:
+        raise HTTPException(status_code=404, detail="Roadmap details not found")
+    return loaded[0]
+
+@app.get("/roadmaps/list", response_model=List[schemas.RoadmapListResponse])
+def get_roadmaps_list(
+    current_user: models.User = Depends(read_users_me),
+    db: Session = Depends(database.get_db)
+):
     roadmaps = db.query(models.Roadmap).filter(models.Roadmap.user_id == current_user.id).all()
-    result = []
-    
+    res = []
     for r in roadmaps:
-        r_dict = {
+        # Calculate progress
+        pct, _ = get_user_progress_stats(db, current_user.id, r.id)
+        res.append({
             "id": r.id,
             "title": r.title,
-            "type": r.type,
-            "macro_steps": []
-        }
-        
-        macros = db.query(models.MacroStep).filter(models.MacroStep.roadmap_id == r.id).order_by(models.MacroStep.order_index).all()
-        for macro in macros:
-            m_dict = {
-                "id": macro.id,
-                "title": macro.title,
-                "order_index": macro.order_index,
-                "micro_steps": []
-            }
-            
-            micros = db.query(models.MicroStep).filter(models.MicroStep.macro_step_id == macro.id).all()
-            for micro in micros:
-                passed_quiz = db.query(models.QuizAttempt).filter(
-                    models.QuizAttempt.user_id == current_user.id,
-                    models.QuizAttempt.micro_step_id == micro.id,
-                    models.QuizAttempt.score >= 3
-                ).first() is not None
-                
-                m_dict["micro_steps"].append({
-                    "id": micro.id,
-                    "title": micro.title,
-                    "description": micro.description,
-                    "difficulty": micro.difficulty,
-                    "weight": micro.weight,
-                    "resource_link": micro.resource_link,
-                    "quiz_passed": passed_quiz
-                })
-            
-            r_dict["macro_steps"].append(m_dict)
-            
-        result.append(r_dict)
-    
-    return result
+            "description": r.description,
+            "progress": pct,
+            "created_date": r.created_at,
+            "updated_date": r.created_at,
+            "archived_status": r.is_archived or False,
+            "selected_status": r.id == current_user.selected_roadmap_id,
+            "roadmap_type": r.type
+        })
+    return res
 
-def calculate_user_quiz_bonus(db: Session, user_id: int) -> int:
-    # Get user's best attempt score per micro step
-    best_attempts = db.query(
-        models.QuizAttempt.micro_step_id,
-        func.max(models.QuizAttempt.score).label("max_score")
-    ).filter(models.QuizAttempt.user_id == user_id).group_by(models.QuizAttempt.micro_step_id).all()
+@app.post("/roadmap/select/{roadmap_id}")
+def select_roadmap_by_id(
+    roadmap_id: int,
+    current_user: models.User = Depends(read_users_me),
+    db: Session = Depends(database.get_db)
+):
+    roadmap = db.query(models.Roadmap).filter(models.Roadmap.id == roadmap_id).first()
+    if not roadmap:
+        raise HTTPException(status_code=404, detail="Roadmap not found")
+    if roadmap.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied: you do not own this roadmap")
+        
+    current_user.selected_roadmap_id = roadmap.id
+    db.commit()
+    
+    backend_logger.info(f"Roadmap Selected: {roadmap_id}")
+    backend_logger.info(f"Roadmap Switched: {roadmap_id}")
+    return {"message": "Active roadmap updated successfully", "selected_roadmap_id": roadmap.id}
+
+@app.put("/roadmap/rename/{roadmap_id}")
+def rename_roadmap_put(
+    roadmap_id: int,
+    payload: schemas.RenameRoadmapRequest,
+    current_user: models.User = Depends(read_users_me),
+    db: Session = Depends(database.get_db)
+):
+    roadmap = db.query(models.Roadmap).filter(models.Roadmap.id == roadmap_id).first()
+    if not roadmap:
+        raise HTTPException(status_code=404, detail="Roadmap not found")
+    if roadmap.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied: you do not own this roadmap")
+        
+    new_title = payload.title.strip()
+    if not new_title:
+        raise HTTPException(status_code=400, detail="Roadmap title cannot be empty")
+        
+    roadmap.title = new_title
+    db.commit()
+    
+    backend_logger.info(f"Roadmap Renamed: {roadmap_id}")
+    return {"message": "Roadmap renamed successfully", "title": roadmap.title}
+
+@app.post("/roadmap/archive/{roadmap_id}")
+def archive_roadmap_post(
+    roadmap_id: int,
+    current_user: models.User = Depends(read_users_me),
+    db: Session = Depends(database.get_db)
+):
+    roadmap = db.query(models.Roadmap).filter(models.Roadmap.id == roadmap_id).first()
+    if not roadmap:
+        raise HTTPException(status_code=404, detail="Roadmap not found")
+    if roadmap.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied: you do not own this roadmap")
+        
+    roadmap.is_archived = not roadmap.is_archived
+    db.commit()
+    
+    backend_logger.info(f"Roadmap Archived: {roadmap_id}")
+    return {"message": "Roadmap archive status updated successfully", "is_archived": roadmap.is_archived}
+
+@app.delete("/roadmap/delete/{roadmap_id}")
+def delete_roadmap_endpoint(
+    roadmap_id: int,
+    current_user: models.User = Depends(read_users_me),
+    db: Session = Depends(database.get_db)
+):
+    roadmap = db.query(models.Roadmap).filter(models.Roadmap.id == roadmap_id).first()
+    if not roadmap:
+        raise HTTPException(status_code=404, detail="Roadmap not found")
+    if roadmap.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied: you do not own this roadmap")
+        
+    try:
+        # Delete only this roadmap's related details
+        phases = db.query(models.RoadmapPhase).filter(models.RoadmapPhase.roadmap_id == roadmap.id).all()
+        phase_ids = [p.id for p in phases]
+        topics = db.query(models.RoadmapTopic).filter(models.RoadmapTopic.phase_id.in_(phase_ids)).all() if phase_ids else []
+        topic_ids = [t.id for t in topics]
+        
+        if topic_ids:
+            # Delete quizzes and quiz questions
+            quizzes = db.query(models.Quiz).filter(models.Quiz.micro_step_id.in_(topic_ids)).all()
+            quiz_ids = [q.id for q in quizzes]
+            if quiz_ids:
+                db.query(models.QuizQuestion).filter(models.QuizQuestion.quiz_id.in_(quiz_ids)).delete(synchronize_session=False)
+            db.query(models.Quiz).filter(models.Quiz.micro_step_id.in_(topic_ids)).delete(synchronize_session=False)
+            
+            # Delete progress and quiz attempts
+            db.query(models.Progress).filter(models.Progress.micro_step_id.in_(topic_ids)).delete(synchronize_session=False)
+            db.query(models.QuizAttempt).filter(models.QuizAttempt.micro_step_id.in_(topic_ids)).delete(synchronize_session=False)
+            
+            # Delete topics
+            db.query(models.RoadmapTopic).filter(models.RoadmapTopic.phase_id.in_(phase_ids)).delete(synchronize_session=False)
+            
+        # Delete phases
+        db.query(models.RoadmapPhase).filter(models.RoadmapPhase.roadmap_id == roadmap.id).delete(synchronize_session=False)
+        
+        # Delete the roadmap
+        db.delete(roadmap)
+        
+        # If the deleted roadmap was selected
+        if current_user.selected_roadmap_id == roadmap_id:
+            current_user.selected_roadmap_id = None
+            
+            # Automatically switch to another active roadmap if one exists
+            remaining = db.query(models.Roadmap).filter(
+                models.Roadmap.user_id == current_user.id,
+                models.Roadmap.id != roadmap_id,
+                models.Roadmap.is_archived == False
+            ).order_by(models.Roadmap.id.desc()).first()
+            if remaining:
+                current_user.selected_roadmap_id = remaining.id
+        
+        db.commit()
+        
+        backend_logger.info(f"Roadmap Deleted: {roadmap_id}")
+        return {"message": "Roadmap deleted successfully", "selected_roadmap_id": current_user.selected_roadmap_id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete roadmap: {str(e)}")
+
+@app.post("/roadmap/regenerate/{roadmap_id}")
+def regenerate_roadmap_endpoint(
+    roadmap_id: int,
+    current_user: models.User = Depends(read_users_me),
+    db: Session = Depends(database.get_db)
+):
+    old_roadmap = db.query(models.Roadmap).filter(models.Roadmap.id == roadmap_id).first()
+    if not old_roadmap:
+        raise HTTPException(status_code=404, detail="Roadmap not found")
+    if old_roadmap.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied: you do not own this roadmap")
+        
+    if not os.getenv("GROQ_API_KEY"):
+        raise HTTPException(status_code=400, detail="Missing Groq API Key")
+
+    # Fetch profile data
+    questionnaire = db.query(models.RoadmapQuestionnaire).filter(models.RoadmapQuestionnaire.user_id == current_user.id).first()
+    if not questionnaire:
+        raise HTTPException(status_code=400, detail="Roadmap questionnaire not found. Please complete the questionnaire first.")
+
+    learning_style = "Practical/Project-based"
+    ans = db.query(models.Answer).join(
+        models.Question, models.Answer.question_id == models.Question.id
+    ).filter(
+        models.Question.question_text == "Learning style",
+        models.Answer.user_id == current_user.id
+    ).first()
+    if ans:
+        learning_style = ans.selected_option
+        
+    career_quiz = db.query(models.CareerRecommendationQuiz).filter(models.CareerRecommendationQuiz.user_id == current_user.id).first()
+    placement_profile = db.query(models.PlacementProfile).filter(models.PlacementProfile.user_id == current_user.id).first()
+
+    profile_data = {
+        "career": questionnaire.primary_career_goal,
+        "languages": questionnaire.programming_languages,
+        "skill": questionnaire.current_skill_level,
+        "study_time": questionnaire.daily_learning_time,
+        "timeline": questionnaire.target_timeline,
+        "learning_style": learning_style,
+        "year": questionnaire.year,
+        "branch": questionnaire.branch,
+        "questionnaire_answers": {
+            "name": questionnaire.name,
+            "college": questionnaire.college,
+            "year": questionnaire.year,
+            "branch": questionnaire.branch,
+            "languages": questionnaire.programming_languages,
+            "career": questionnaire.primary_career_goal,
+            "skill": questionnaire.current_skill_level,
+            "study_time": questionnaire.daily_learning_time,
+            "timeline": questionnaire.target_timeline
+        },
+        "career_quiz_answers": {
+            "activities": career_quiz.activities,
+            "subject": career_quiz.subject,
+            "work_type": career_quiz.work_type,
+            "recommended_careers": career_quiz.recommended_careers
+        } if career_quiz else None,
+        "placement_answers": {
+            "focus_areas": placement_profile.aptitude_level, # compatibility
+            "dsa_level": placement_profile.dsa_level,
+            "target_companies": placement_profile.target_companies,
+            "timeline": placement_profile.timeline
+        } if placement_profile else None
+    }
+
+    try:
+        backend_logger.info("Retry Started")
+        
+        # Call Groq & Validate
+        import groq_ai_service
+        generated_data = groq_ai_service.generate_personalized_roadmap(profile_data)
+        backend_logger.info("JSON Validated")
+        
+        rm_index = 0 if old_roadmap.type == "fast_track" else 1
+        rm_schema = generated_data["roadmaps"][rm_index]
+        
+        # Save temporary roadmap
+        new_rm = models.Roadmap(
+            user_id=current_user.id,
+            title=rm_schema["title"],
+            description=rm_schema["description"],
+            type=old_roadmap.type,
+            generated_by_ai=True,
+            created_at=datetime.datetime.utcnow()
+        )
+        db.add(new_rm)
+        db.flush()
+        
+        for ph_schema in rm_schema["phases"]:
+            new_phase = models.RoadmapPhase(
+                roadmap_id=new_rm.id,
+                phase_number=ph_schema["phase_number"],
+                phase_title=ph_schema["phase_title"],
+                estimated_duration=ph_schema["estimated_duration"]
+            )
+            db.add(new_phase)
+            db.flush()
+            
+            for idx, tp_schema in enumerate(ph_schema["topics"]):
+                resources_json = json.dumps(tp_schema["resources"])
+                new_topic = models.RoadmapTopic(
+                    phase_id=new_phase.id,
+                    topic_title=tp_schema["topic"],
+                    difficulty=tp_schema["difficulty"],
+                    estimated_hours=tp_schema["estimated_hours"],
+                    resources_json=resources_json,
+                    mini_project=tp_schema["mini_project"],
+                    quiz_required=tp_schema["quiz_required"],
+                    completed=False,
+                    order_number=idx + 1
+                )
+                db.add(new_topic)
+        db.flush()
+        
+        # Switch selection
+        if current_user.selected_roadmap_id == old_roadmap.id:
+            current_user.selected_roadmap_id = new_rm.id
+            
+        # Delete old roadmap
+        old_phases = db.query(models.RoadmapPhase).filter(models.RoadmapPhase.roadmap_id == old_roadmap.id).all()
+        old_phase_ids = [p.id for p in old_phases]
+        old_topics = db.query(models.RoadmapTopic).filter(models.RoadmapTopic.phase_id.in_(old_phase_ids)).all() if old_phase_ids else []
+        old_topic_ids = [t.id for t in old_topics]
+        
+        if old_topic_ids:
+            quizzes = db.query(models.Quiz).filter(models.Quiz.micro_step_id.in_(old_topic_ids)).all()
+            quiz_ids = [q.id for q in quizzes]
+            if quiz_ids:
+                db.query(models.QuizQuestion).filter(models.QuizQuestion.quiz_id.in_(quiz_ids)).delete(synchronize_session=False)
+            db.query(models.Quiz).filter(models.Quiz.micro_step_id.in_(old_topic_ids)).delete(synchronize_session=False)
+            db.query(models.Progress).filter(models.Progress.micro_step_id.in_(old_topic_ids)).delete(synchronize_session=False)
+            db.query(models.QuizAttempt).filter(models.QuizAttempt.micro_step_id.in_(old_topic_ids)).delete(synchronize_session=False)
+            db.query(models.RoadmapTopic).filter(models.RoadmapTopic.phase_id.in_(old_phase_ids)).delete(synchronize_session=False)
+            
+        db.query(models.RoadmapPhase).filter(models.RoadmapPhase.roadmap_id == old_roadmap.id).delete(synchronize_session=False)
+        db.delete(old_roadmap)
+        
+        db.commit()
+        backend_logger.info(f"Roadmap Regenerated: {new_rm.id}")
+        return {"success": True, "message": "Roadmap regenerated successfully", "new_roadmap_id": new_rm.id}
+    except Exception as e:
+        db.rollback()
+        backend_logger.error(f"Generation Failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Regeneration failed: {str(e)}")
+
+
+def calculate_user_quiz_bonus(db: Session, user_id: int, roadmap_id: Optional[int] = None) -> int:
+    # Get user's best attempt score per micro step/topic of a specific roadmap
+    if roadmap_id:
+        phases = db.query(models.RoadmapPhase).filter(models.RoadmapPhase.roadmap_id == roadmap_id).all()
+        phase_ids = [p.id for p in phases]
+        topics = db.query(models.RoadmapTopic).filter(models.RoadmapTopic.phase_id.in_(phase_ids)).all() if phase_ids else []
+        topic_ids = [t.id for t in topics]
+        
+        if not topic_ids:
+            macros = db.query(models.MacroStep).filter(models.MacroStep.roadmap_id == roadmap_id).all()
+            macro_ids = [m.id for m in macros]
+            micros = db.query(models.MicroStep).filter(models.MicroStep.macro_step_id.in_(macro_ids)).all() if macro_ids else []
+            topic_ids = [m.id for m in micros]
+            
+        if not topic_ids:
+            return 0
+            
+        best_attempts = db.query(
+            models.QuizAttempt.micro_step_id,
+            func.max(models.QuizAttempt.score).label("max_score")
+        ).filter(
+            models.QuizAttempt.user_id == user_id,
+            models.QuizAttempt.micro_step_id.in_(topic_ids)
+        ).group_by(models.QuizAttempt.micro_step_id).all()
+    else:
+        best_attempts = db.query(
+            models.QuizAttempt.micro_step_id,
+            func.max(models.QuizAttempt.score).label("max_score")
+        ).filter(models.QuizAttempt.user_id == user_id).group_by(models.QuizAttempt.micro_step_id).all()
     
     bonus = 0
     for ba in best_attempts:
@@ -342,20 +1217,51 @@ def calculate_user_quiz_bonus(db: Session, user_id: int) -> int:
             bonus += 5
     return bonus
 
-def calculate_user_total_score(db: Session, user_id: int) -> int:
-    prog = db.query(models.Progress).filter(
-        models.Progress.user_id == user_id,
-        models.Progress.is_completed == True
-    ).all()
-    completed_ids = [p.micro_step_id for p in prog]
-    
-    roadmap_score = 0
-    if completed_ids:
-        roadmap_score = db.query(func.sum(models.MicroStep.weight)).filter(
-            models.MicroStep.id.in_(completed_ids)
-        ).scalar() or 0
+def calculate_user_total_score(db: Session, user_id: int, roadmap_id: Optional[int] = None) -> int:
+    if not roadmap_id:
+        user_record = db.query(models.User).filter(models.User.id == user_id).first()
+        roadmap_id = user_record.selected_roadmap_id if user_record else None
         
-    quiz_bonus = calculate_user_quiz_bonus(db, user_id)
+    if not roadmap_id:
+        first_rm = db.query(models.Roadmap).filter(models.Roadmap.user_id == user_id).first()
+        roadmap_id = first_rm.id if first_rm else None
+
+    if not roadmap_id:
+        return 0
+
+    # Scoped to the specific roadmap_id
+    completed_topics = db.query(models.RoadmapTopic).join(models.RoadmapPhase).filter(
+        models.RoadmapPhase.roadmap_id == roadmap_id,
+        models.RoadmapTopic.completed == True
+    ).all()
+    
+    roadmap_score = len(completed_topics) * 10
+    
+    # Check old progress entries just in case
+    phases = db.query(models.RoadmapPhase).filter(models.RoadmapPhase.roadmap_id == roadmap_id).all()
+    phase_ids = [p.id for p in phases]
+    topics = db.query(models.RoadmapTopic).filter(models.RoadmapTopic.phase_id.in_(phase_ids)).all() if phase_ids else []
+    topic_ids = [t.id for t in topics]
+    
+    if not topic_ids:
+        macros = db.query(models.MacroStep).filter(models.MacroStep.roadmap_id == roadmap_id).all()
+        macro_ids = [m.id for m in macros]
+        micros = db.query(models.MicroStep).filter(models.MicroStep.macro_step_id.in_(macro_ids)).all() if macro_ids else []
+        topic_ids = [m.id for m in micros]
+        if topic_ids:
+            prog = db.query(models.Progress).filter(
+                models.Progress.user_id == user_id,
+                models.Progress.micro_step_id.in_(topic_ids),
+                models.Progress.is_completed == True
+            ).all()
+            old_completed_ids = [p.micro_step_id for p in prog]
+            if old_completed_ids:
+                old_score = db.query(func.sum(models.MicroStep.weight)).filter(
+                    models.MicroStep.id.in_(old_completed_ids)
+                ).scalar() or 0
+                roadmap_score += old_score
+        
+    quiz_bonus = calculate_user_quiz_bonus(db, user_id, roadmap_id)
     return roadmap_score + quiz_bonus
 
 @app.post("/progress/complete")
@@ -364,56 +1270,109 @@ def mark_progress_complete(
     current_user: models.User = Depends(read_users_me), 
     db: Session = Depends(database.get_db)
 ):
-    # Enforce passing the quiz first
-    passed_quiz = db.query(models.QuizAttempt).filter(
-        models.QuizAttempt.user_id == current_user.id,
-        models.QuizAttempt.micro_step_id == progress_data.micro_step_id,
-        models.QuizAttempt.score >= 3
-    ).first() is not None
-    
-    if not passed_quiz:
-        raise HTTPException(
-            status_code=400,
-            detail="You must pass the quiz for this step (minimum 60% score) before marking it complete."
-        )
+    topic = db.query(models.RoadmapTopic).filter(models.RoadmapTopic.id == progress_data.micro_step_id).first()
+    if not topic:
+        # Fallback to old MicroStep just in case
+        target_micro = db.query(models.MicroStep).filter(models.MicroStep.id == progress_data.micro_step_id).first()
+        if not target_micro:
+            raise HTTPException(status_code=404, detail="Topic or Step not found")
+        
+        # Ownership validation
+        macro = db.query(models.MacroStep).filter(models.MacroStep.id == target_micro.macro_step_id).first()
+        if not macro:
+            raise HTTPException(status_code=404, detail="Macro step not found")
+        roadmap = db.query(models.Roadmap).filter(models.Roadmap.id == macro.roadmap_id).first()
+        if not roadmap or roadmap.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Access denied: you do not own this roadmap")
 
-    existing = db.query(models.Progress).filter(
-        models.Progress.user_id == current_user.id,
-        models.Progress.micro_step_id == progress_data.micro_step_id
-    ).first()
-    
-    if existing:
-        if existing.is_completed:
-            return {"message": "Already completed"}
-        else:
+        # Enforce passing the quiz first
+        passed_quiz = db.query(models.QuizAttempt).filter(
+            models.QuizAttempt.user_id == current_user.id,
+            models.QuizAttempt.micro_step_id == progress_data.micro_step_id,
+            models.QuizAttempt.score >= 3
+        ).first() is not None
+        
+        if not passed_quiz:
+            raise HTTPException(
+                status_code=400,
+                detail="You must pass the quiz for this step (minimum 60% score) before marking it complete."
+            )
+            
+        existing = db.query(models.Progress).filter(
+            models.Progress.user_id == current_user.id,
+            models.Progress.micro_step_id == target_micro.id
+        ).first()
+        if existing:
             existing.is_completed = True
-            db.commit()
-            return {"message": "Step marked as completed"}
-            
-    target_micro = db.query(models.MicroStep).filter(models.MicroStep.id == progress_data.micro_step_id).first()
-    if not target_micro:
-        raise HTTPException(status_code=404, detail="Micro step not found")
-            
-    new_prog = models.Progress(
-        user_id=current_user.id, 
-        micro_step_id=target_micro.id,
-        is_completed=True
-    )
-    db.add(new_prog)
+        else:
+            new_prog = models.Progress(
+                user_id=current_user.id, 
+                micro_step_id=target_micro.id,
+                is_completed=True,
+                completed_at=datetime.datetime.utcnow()
+            )
+            db.add(new_prog)
+        db.commit()
+        return {"message": "Step marked as completed"}
+
+    # Ownership validation
+    phase = db.query(models.RoadmapPhase).filter(models.RoadmapPhase.id == topic.phase_id).first()
+    if not phase:
+        raise HTTPException(status_code=404, detail="Topic phase not found")
+    roadmap = db.query(models.Roadmap).filter(models.Roadmap.id == phase.roadmap_id).first()
+    if not roadmap or roadmap.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied: you do not own this roadmap")
+
+    # Complete the new RoadmapTopic
+    topic.completed = True
+    
+    # Also save to Progress table for backwards-compatibility (leaderboard stats/etc)
+    existing_prog = db.query(models.Progress).filter(
+        models.Progress.user_id == current_user.id,
+        models.Progress.micro_step_id == topic.id
+    ).first()
+    if not existing_prog:
+        new_prog = models.Progress(
+            user_id=current_user.id, 
+            micro_step_id=topic.id,
+            is_completed=True,
+            completed_at=datetime.datetime.utcnow()
+        )
+        db.add(new_prog)
     db.commit()
     return {"message": "Step marked as completed"}
 
 @app.get("/progress", response_model=List[schemas.ProgressResponse])
 def get_progress(current_user: models.User = Depends(read_users_me), db: Session = Depends(database.get_db)):
+    selected_id = current_user.selected_roadmap_id
+    if not selected_id:
+        return []
+        
+    # Get topics for the selected roadmap
+    phases = db.query(models.RoadmapPhase).filter(models.RoadmapPhase.roadmap_id == selected_id).all()
+    phase_ids = [p.id for p in phases]
+    topics = db.query(models.RoadmapTopic).filter(models.RoadmapTopic.phase_id.in_(phase_ids)).all() if phase_ids else []
+    topic_ids = [t.id for t in topics]
+    
+    if not topic_ids:
+        macros = db.query(models.MacroStep).filter(models.MacroStep.roadmap_id == selected_id).all()
+        macro_ids = [m.id for m in macros]
+        micros = db.query(models.MicroStep).filter(models.MicroStep.macro_step_id.in_(macro_ids)).all() if macro_ids else []
+        topic_ids = [m.id for m in micros]
+        
+    if not topic_ids:
+        return []
+        
     prog = db.query(models.Progress).filter(
         models.Progress.user_id == current_user.id,
+        models.Progress.micro_step_id.in_(topic_ids),
         models.Progress.is_completed == True
     ).all()
     return prog
 
 @app.get("/progress/score", response_model=schemas.ScoreResponse)
 def get_score(current_user: models.User = Depends(read_users_me), db: Session = Depends(database.get_db)):
-    score = calculate_user_total_score(db, current_user.id)
+    score = calculate_user_total_score(db, current_user.id, current_user.selected_roadmap_id)
     return {"score": score}
 
 def analyze_user_progress(db: Session, user_id: int):
@@ -429,53 +1388,34 @@ def analyze_user_progress(db: Session, user_id: int):
         
     return suggestions
 
-@app.get("/roadmap/suggestions", response_model=schemas.SuggestionsResponse)
-def get_suggestions(current_user: models.User = Depends(read_users_me), db: Session = Depends(database.get_db)):
-    suggestions = analyze_user_progress(db, current_user.id)
-    return {"suggestions": suggestions}
-
 
 def get_leaderboard_data(db: Session, roadmap_type: str = None):
     users = db.query(models.User).all()
     
     leaderboard = []
     for u in users:
+        # Determine user role/track
+        ans = db.query(models.Answer).join(models.Question, models.Answer.question_id == models.Question.id).filter(
+            models.Question.question_text == "Preferred role",
+            models.Answer.user_id == u.id
+        ).first()
+        role = ans.selected_option if ans else "backend"
+        if not ans:
+            q = db.query(models.RoadmapQuestionnaire).filter(models.RoadmapQuestionnaire.user_id == u.id).first()
+            if q:
+                goal = q.primary_career_goal.lower()
+                if "backend" in goal:
+                    role = "backend"
+                elif "frontend" in goal:
+                    role = "frontend"
+                elif "ai" in goal or "machine" in goal or "data" in goal:
+                    role = "ai"
+                    
         # Check roadmap type filter
-        if roadmap_type:
-            ans = db.query(models.Answer).join(models.Question, models.Answer.question_id == models.Question.id).filter(
-                models.Question.question_text == "Preferred role",
-                models.Answer.user_id == u.id
-            ).first()
-            role = ans.selected_option if ans else "backend"
-            if role != roadmap_type:
-                continue
-                
-        # Calculate progress score
-        prog = db.query(models.Progress).filter(
-            models.Progress.user_id == u.id,
-            models.Progress.is_completed == True
-        ).all()
-        completed_ids = [p.micro_step_id for p in prog]
-        
-        roadmap_score = 0
-        if completed_ids:
-            roadmap_score = db.query(func.sum(models.MicroStep.weight)).filter(
-                models.MicroStep.id.in_(completed_ids)
-            ).scalar() or 0
+        if roadmap_type and role != roadmap_type:
+            continue
             
-        # Calculate max score
-        max_score_val = db.query(func.sum(models.MicroStep.weight)).select_from(models.Roadmap).join(
-            models.MacroStep, models.Roadmap.id == models.MacroStep.roadmap_id
-        ).join(
-            models.MicroStep, models.MacroStep.id == models.MicroStep.macro_step_id
-        ).filter(models.Roadmap.user_id == u.id).scalar() or 0
-        
-        quiz_bonus = calculate_user_quiz_bonus(db, u.id)
-        total_score = roadmap_score + quiz_bonus
-        
-        pct = 0.0
-        if max_score_val > 0:
-            pct = round((roadmap_score / max_score_val) * 100, 2)
+        pct, total_score = get_user_progress_stats(db, u.id)
             
         leaderboard.append({
             "username": u.username,
@@ -501,6 +1441,7 @@ def get_leaderboard_data(db: Session, roadmap_type: str = None):
         })
         
     return ranked_leaderboard
+
 
 @app.get("/leaderboard/global", response_model=List[schemas.LeaderboardUser])
 def get_global_leaderboard(db: Session = Depends(database.get_db)):
@@ -608,22 +1549,19 @@ def get_friends_progress(current_user: models.User = Depends(read_users_me), db:
                 models.Answer.user_id == fid
             ).first()
             roadmap_type = ans.selected_option if ans else "backend"
+            if not ans:
+                q = db.query(models.RoadmapQuestionnaire).filter(models.RoadmapQuestionnaire.user_id == fid).first()
+                if q:
+                    goal = q.primary_career_goal.lower()
+                    if "backend" in goal:
+                        roadmap_type = "backend"
+                    elif "frontend" in goal:
+                        roadmap_type = "frontend"
+                    elif "ai" in goal or "machine" in goal or "data" in goal:
+                        roadmap_type = "ai"
             
-            roadmap_score = db.query(func.sum(models.MicroStep.weight)).select_from(models.Progress).join(
-                models.MicroStep, models.Progress.micro_step_id == models.MicroStep.id
-            ).filter(models.Progress.user_id == fid, models.Progress.is_completed == True).scalar() or 0
-            max_score_val = db.query(func.sum(models.MicroStep.weight)).select_from(models.Roadmap).join(
-                models.MacroStep, models.Roadmap.id == models.MacroStep.roadmap_id
-            ).join(
-                models.MicroStep, models.MacroStep.id == models.MicroStep.macro_step_id
-            ).filter(models.Roadmap.user_id == fid).scalar() or 0
-            quiz_bonus = calculate_user_quiz_bonus(db, fid)
-            score_val = roadmap_score + quiz_bonus
+            pct, score_val = get_user_progress_stats(db, fid)
             
-            pct = 0.0
-            if max_score_val > 0:
-                pct = round((roadmap_score / max_score_val) * 100, 2)
-                
             res.append({
                 "username": user.username,
                 "roadmap_type": roadmap_type,
@@ -633,22 +1571,52 @@ def get_friends_progress(current_user: models.User = Depends(read_users_me), db:
         
     return res
 
-def get_user_progress_stats(db: Session, user_id: int):
-    roadmap_score = db.query(func.sum(models.MicroStep.weight)).select_from(models.Progress).join(
-        models.MicroStep, models.Progress.micro_step_id == models.MicroStep.id
-    ).filter(models.Progress.user_id == user_id, models.Progress.is_completed == True).scalar() or 0
-    max_score_val = db.query(func.sum(models.MicroStep.weight)).select_from(models.Roadmap).join(
-        models.MacroStep, models.Roadmap.id == models.MacroStep.roadmap_id
-    ).join(
-        models.MicroStep, models.MacroStep.id == models.MicroStep.macro_step_id
-    ).filter(models.Roadmap.user_id == user_id).scalar() or 0
-    quiz_bonus = calculate_user_quiz_bonus(db, user_id)
-    score_val = roadmap_score + quiz_bonus
-    
-    pct = 0.0
-    if max_score_val > 0:
-        pct = round((roadmap_score / max_score_val) * 100, 2)
-    return pct, score_val
+def get_user_progress_stats(db: Session, user_id: int, roadmap_id: Optional[int] = None):
+    # Check if this user has any AI roadmaps first!
+    if not roadmap_id:
+        user_record = db.query(models.User).filter(models.User.id == user_id).first()
+        roadmap_id = user_record.selected_roadmap_id if user_record else None
+        
+    if not roadmap_id:
+        first_rm = db.query(models.Roadmap).filter(models.Roadmap.user_id == user_id).first()
+        roadmap_id = first_rm.id if first_rm else None
+
+    if not roadmap_id:
+        return 0.0, 0
+
+    roadmap = db.query(models.Roadmap).filter(models.Roadmap.id == roadmap_id).first()
+    if not roadmap:
+        return 0.0, 0
+
+    if roadmap.generated_by_ai:
+        total_topics = db.query(models.RoadmapTopic).join(models.RoadmapPhase).filter(models.RoadmapPhase.roadmap_id == roadmap_id).count()
+        completed_topics = db.query(models.RoadmapTopic).join(models.RoadmapPhase).filter(
+            models.RoadmapPhase.roadmap_id == roadmap_id,
+            models.RoadmapTopic.completed == True
+        ).count()
+        
+        pct = 0.0
+        if total_topics > 0:
+            pct = round((completed_topics / total_topics) * 100, 2)
+            
+        score_val = calculate_user_total_score(db, user_id, roadmap_id)
+        return pct, score_val
+    else:
+        roadmap_score = db.query(func.sum(models.MicroStep.weight)).select_from(models.Progress).join(
+            models.MicroStep, models.Progress.micro_step_id == models.MicroStep.id
+        ).filter(models.Progress.user_id == user_id, models.Progress.is_completed == True).scalar() or 0
+        max_score_val = db.query(func.sum(models.MicroStep.weight)).select_from(models.Roadmap).join(
+            models.MacroStep, models.Roadmap.id == models.MacroStep.roadmap_id
+        ).join(
+            models.MicroStep, models.MacroStep.id == models.MicroStep.macro_step_id
+        ).filter(models.Roadmap.user_id == user_id).scalar() or 0
+        quiz_bonus = calculate_user_quiz_bonus(db, user_id, roadmap_id)
+        score_val = roadmap_score + quiz_bonus
+        
+        pct = 0.0
+        if max_score_val > 0:
+            pct = round((roadmap_score / max_score_val) * 100, 2)
+        return pct, score_val
 
 @app.post("/groups/create", response_model=schemas.GroupResponseNew)
 def create_group(group: schemas.GroupCreateNew, current_user: models.User = Depends(read_users_me), db: Session = Depends(database.get_db)):
@@ -923,17 +1891,45 @@ def get_quiz(
     current_user: models.User = Depends(read_users_me),
     db: Session = Depends(database.get_db)
 ):
+    # Verify ownership of micro_step_id
+    topic = db.query(models.RoadmapTopic).filter(models.RoadmapTopic.id == micro_step_id).first()
+    if topic:
+        phase = db.query(models.RoadmapPhase).filter(models.RoadmapPhase.id == topic.phase_id).first()
+        if not phase:
+            raise HTTPException(status_code=404, detail="Topic phase not found")
+        roadmap = db.query(models.Roadmap).filter(models.Roadmap.id == phase.roadmap_id).first()
+        if not roadmap or roadmap.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Access denied: you do not own this roadmap")
+    else:
+        micro_step = db.query(models.MicroStep).filter(models.MicroStep.id == micro_step_id).first()
+        if micro_step:
+            macro = db.query(models.MacroStep).filter(models.MacroStep.id == micro_step.macro_step_id).first()
+            if not macro:
+                raise HTTPException(status_code=404, detail="Macro step not found")
+            roadmap = db.query(models.Roadmap).filter(models.Roadmap.id == macro.roadmap_id).first()
+            if not roadmap or roadmap.user_id != current_user.id:
+                raise HTTPException(status_code=403, detail="Access denied: you do not own this roadmap")
+        else:
+            raise HTTPException(status_code=404, detail="Step not found")
+
     import random
     # Find the Quiz row for this micro_step_id
     quiz = db.query(models.Quiz).filter(models.Quiz.micro_step_id == micro_step_id).first()
     if not quiz:
-        # Fallback: check if the micro step exists, and if so, create the quiz dynamically
-        micro_step = db.query(models.MicroStep).filter(models.MicroStep.id == micro_step_id).first()
-        if not micro_step:
-            raise HTTPException(status_code=404, detail="Micro step not found")
-        from roadmap_logic import create_quiz_for_micro_step
-        create_quiz_for_micro_step(db, micro_step_id, micro_step.title)
-        quiz = db.query(models.Quiz).filter(models.Quiz.micro_step_id == micro_step_id).first()
+        # Fallback: check if the ID belongs to a RoadmapTopic (new AI roadmaps) or a MicroStep (old roadmaps)
+        roadmap_topic = db.query(models.RoadmapTopic).filter(models.RoadmapTopic.id == micro_step_id).first()
+        if roadmap_topic:
+            from roadmap_logic import create_quiz_for_micro_step
+            create_quiz_for_micro_step(db, micro_step_id, roadmap_topic.topic_title)
+            quiz = db.query(models.Quiz).filter(models.Quiz.micro_step_id == micro_step_id).first()
+        else:
+            micro_step = db.query(models.MicroStep).filter(models.MicroStep.id == micro_step_id).first()
+            if not micro_step:
+                raise HTTPException(status_code=404, detail="Topic or Step not found")
+            from roadmap_logic import create_quiz_for_micro_step
+            create_quiz_for_micro_step(db, micro_step_id, micro_step.title)
+            quiz = db.query(models.Quiz).filter(models.Quiz.micro_step_id == micro_step_id).first()
+            
         if not quiz:
             raise HTTPException(status_code=404, detail="Quiz not found and could not be created")
 
@@ -993,6 +1989,27 @@ def submit_quiz(
     db: Session = Depends(database.get_db)
 ):
     micro_step_id = payload.micro_step_id
+    # Verify ownership of micro_step_id
+    topic = db.query(models.RoadmapTopic).filter(models.RoadmapTopic.id == micro_step_id).first()
+    if topic:
+        phase = db.query(models.RoadmapPhase).filter(models.RoadmapPhase.id == topic.phase_id).first()
+        if not phase:
+            raise HTTPException(status_code=404, detail="Topic phase not found")
+        roadmap = db.query(models.Roadmap).filter(models.Roadmap.id == phase.roadmap_id).first()
+        if not roadmap or roadmap.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Access denied: you do not own this roadmap")
+    else:
+        micro_step = db.query(models.MicroStep).filter(models.MicroStep.id == micro_step_id).first()
+        if micro_step:
+            macro = db.query(models.MacroStep).filter(models.MacroStep.id == micro_step.macro_step_id).first()
+            if not macro:
+                raise HTTPException(status_code=404, detail="Macro step not found")
+            roadmap = db.query(models.Roadmap).filter(models.Roadmap.id == macro.roadmap_id).first()
+            if not roadmap or roadmap.user_id != current_user.id:
+                raise HTTPException(status_code=403, detail="Access denied: you do not own this roadmap")
+        else:
+            raise HTTPException(status_code=404, detail="Step not found")
+
     answers = payload.answers
 
     # Find the quiz

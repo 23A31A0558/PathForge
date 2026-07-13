@@ -133,7 +133,41 @@ def create_quiz_for_micro_step(db, micro_step_id: int, topic_name: str):
     db.refresh(new_quiz)
     
     from quiz_pool import QUIZ_POOL
-    pool_questions = QUIZ_POOL.get(topic_name, [])
+    
+    # Fuzzy match topic name in QUIZ_POOL keys
+    clean_topic = topic_name.strip().lower()
+    matched_key = None
+    
+    # 1. Exact case-insensitive match
+    for key in QUIZ_POOL.keys():
+        if key.lower() == clean_topic:
+            matched_key = key
+            break
+            
+    # 2. Substring match
+    if not matched_key:
+        for key in QUIZ_POOL.keys():
+            key_lower = key.lower()
+            if key_lower in clean_topic or clean_topic in key_lower:
+                matched_key = key
+                break
+                
+    # 3. Word intersection match
+    if not matched_key:
+        max_intersection = 0
+        topic_words = set(clean_topic.split())
+        for key in QUIZ_POOL.keys():
+            key_words = set(key.lower().replace("/", " ").replace("&", " ").split())
+            intersection = len(topic_words.intersection(key_words))
+            if intersection > max_intersection:
+                max_intersection = intersection
+                matched_key = key
+                
+    # Fallback to first available category if still not matched
+    if not matched_key:
+        matched_key = list(QUIZ_POOL.keys())[0] if QUIZ_POOL else None
+        
+    pool_questions = QUIZ_POOL.get(matched_key, []) if matched_key else []
     for pq in pool_questions:
         q = models.QuizQuestion(
             quiz_id=new_quiz.id,

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PathForge - Career Discovery</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Custom style sheet -->
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .quiz-card {
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            background: #FFFFFF;
+            padding: 2.5rem;
+            box-shadow: var(--card-shadow);
+        }
+        .question-title {
+            color: var(--text-color);
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+        .option-box {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .option-box:hover {
+            background-color: var(--primary-light);
+            border-color: var(--primary-color);
+        }
+        .option-box input {
+            cursor: pointer;
+        }
+        .result-card {
+            border: 2px solid var(--primary-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .result-card.selected {
+            background-color: var(--primary-light);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px rgba(79, 70, 229, 0.15);
+        }
+        .result-card:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg border-bottom px-4" style="background-color: var(--primary-color);">
+        <a class="navbar-brand brand-logo text-white m-0 p-0" href="welcome.html">Path<span style="color: #60A5FA;">Forge</span></a>
+        <div class="ms-auto flex-row d-flex align-items-center">
+            <a href="welcome.html" class="btn btn-sm btn-outline-light rounded-pill px-3 me-2">Back</a>
+            <button class="btn btn-sm btn-outline-light rounded-pill px-3" id="logoutBtn">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container py-5" style="max-width: 800px;">
+        <!-- Quiz Form Card -->
+        <div id="quizSection" class="quiz-card">
+            <h2 class="fw-bold mb-2 text-center" style="color: var(--primary-color);">Career Discovery Quiz</h2>
+            <p class="text-muted text-center mb-5">Answer these questions to discover which tech domains fit your style.</p>
+
+            <form id="careerQuizForm" class="needs-validation" novalidate>
+                <!-- Q1: Activities (Multi-Select) -->
+                <div class="mb-5">
+                    <h5 class="question-title">1. Which activities excite you the most? <span class="text-danger">*</span></h5>
+                    <div id="q1Error" class="text-danger small mb-3 d-none">Please select at least one activity.</div>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="checkbox" name="activities" id="act_problem" value="Problem Solving">
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="act_problem">Problem Solving</label>
+                            </div>
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="checkbox" name="activities" id="act_design" value="Designing Websites">
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="act_design">Designing Websites</label>
+                            </div>
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="checkbox" name="activities" id="act_ai" value="Training AI Models">
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="act_ai">Training AI Models</label>
+                            </div>
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="checkbox" name="activities" id="act_data" value="Finding Patterns in Data">
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="act_data">Finding Patterns in Data</label>
+                            </div>
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="checkbox" name="activities" id="act_app" value="Building Applications">
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="act_app">Building Applications</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="checkbox" name="activities" id="act_net" value="Networking">
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="act_net">Networking</label>
+                            </div>
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="checkbox" name="activities" id="act_sec" value="Cyber Security">
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="act_sec">Cyber Security</label>
+                            </div>
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="checkbox" name="activities" id="act_cloud" value="Cloud Infrastructure">
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="act_cloud">Cloud Infrastructure</label>
+                            </div>
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="checkbox" name="activities" id="act_auto" value="Automating Tasks">
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="act_auto">Automating Tasks</label>
+                            </div>
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="checkbox" name="activities" id="act_game" value="Game Development">
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="act_game">Game Development</label>
+                            </div>
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="checkbox" name="activities" id="act_other" value="Other">
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="act_other">Other</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Q2: Subject (Radio) -->
+                <div class="mb-5">
+                    <h5 class="question-title">2. Which subject or domain do you enjoy the most? <span class="text-danger">*</span></h5>
+                    <div id="q2Error" class="text-danger small mb-3 d-none">Please select a subject.</div>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="radio" name="subject" id="sub_math" value="Mathematics" required>
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="sub_math">Mathematics</label>
+                            </div>
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="radio" name="subject" id="sub_prog" value="Programming" required>
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="sub_prog">Programming</label>
+                            </div>
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="radio" name="subject" id="sub_design" value="Design" required>
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="sub_design">Design</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="radio" name="subject" id="sub_net" value="Networking" required>
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="sub_net">Networking</label>
+                            </div>
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="radio" name="subject" id="sub_data" value="Data" required>
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="sub_data">Data</label>
+                            </div>
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="radio" name="subject" id="sub_sec" value="Cyber Security" required>
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="sub_sec">Cyber Security</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Q3: Work Type (Radio) -->
+                <div class="mb-5">
+                    <h5 class="question-title">3. What type of work environment/tasks do you enjoy? <span class="text-danger">*</span></h5>
+                    <div id="q3Error" class="text-danger small mb-3 d-none">Please select a work type.</div>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="radio" name="work_type" id="work_data" value="Working with Data" required>
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="work_data">Working with Data</label>
+                            </div>
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="radio" name="work_logical" value="Logical Problem Solving" id="work_logical" required>
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="work_logical">Logical Problem Solving</label>
+                            </div>
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="radio" name="work_creative" value="Creativity" id="work_creative" required>
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="work_creative">Creativity (UI/UX, Game Logic)</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="radio" name="work_infra" value="Infrastructure" id="work_infra" required>
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="work_infra">Infrastructure & Setup</label>
+                            </div>
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="radio" name="work_people" value="Working with People" id="work_people" required>
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="work_people">Working with People</label>
+                            </div>
+                            <div class="form-check option-box">
+                                <input class="form-check-input" type="radio" name="work_research" value="Research" id="work_research" required>
+                                <label class="form-check-label w-100 fw-semibold text-secondary" for="work_research">Research & Experimentation</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="quizError" class="alert alert-danger d-none" role="alert"></div>
+
+                <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold text-uppercase" id="quizSubmitBtn">Calculate Recommendations</button>
+            </form>
+        </div>
+
+        <!-- Recommendations Result Section (Initially hidden) -->
+        <div id="resultSection" class="quiz-card d-none">
+            <h2 class="fw-bold mb-2 text-center text-success">Discovery Results</h2>
+            <p class="text-muted text-center mb-5">We've calculated your match scores! Select your preferred career option below to proceed to your learning roadmap.</p>
+
+            <div id="recommendationsList" class="mb-4">
+                <!-- Recommendations will be populated here -->
+            </div>
+
+            <div id="selectionError" class="text-danger small mb-3 text-center d-none">Please select a career card above.</div>
+
+            <button type="button" class="btn btn-success w-100 py-3 rounded-pill fw-bold text-uppercase" id="confirmCareerBtn">Confirm and Start Onboarding</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/career_quiz.js"></script>
+</body>
+</html>

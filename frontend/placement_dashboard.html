@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PathForge - Placement Dashboard</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Custom style sheet -->
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .profile-badge {
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+            border-radius: 20px;
+            padding: 0.35rem 0.75rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-block;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .info-card {
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            background: #FFFFFF;
+            padding: 2rem;
+            box-shadow: var(--card-shadow);
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg border-bottom px-4" style="background-color: var(--primary-color);">
+        <a class="navbar-brand brand-logo text-white m-0 p-0" href="dashboard.html">Path<span style="color: #60A5FA;">Forge</span></a>
+        <!-- Hamburger menu for mobile -->
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <div class="ms-auto flex-row d-flex align-items-center mt-3 mt-lg-0 gap-3">
+                <a href="roadmap.html" class="text-white text-decoration-none">Roadmaps</a>
+                <a href="leaderboard.html" class="text-white text-decoration-none">Leaderboard</a>
+                <a href="friends.html" class="text-white text-decoration-none">Friends</a>
+                <a href="groups.html" class="text-white text-decoration-none">Groups</a>
+                <a href="placement_dashboard.html" class="text-white text-decoration-none"><strong style="color: #60A5FA; border-bottom: 2px solid #60A5FA; padding-bottom: 2px;">Placement Preparation</strong></a>
+                <span class="text-white d-none d-lg-inline fw-semibold mx-2" id="userDisplay">...</span>
+                <button class="btn btn-sm btn-outline-light rounded-pill" id="logoutBtn">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-5 my-4">
+        <!-- Hero section -->
+        <div class="row mb-5 text-center">
+            <div class="col-lg-12">
+                <h1 class="fw-bold mb-3" style="color: var(--primary-color);">Placement Preparation Module</h1>
+                <p class="text-muted fs-5">Campus Recruitment preparation is active for your profile.</p>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Left Info Panel -->
+            <div class="col-md-7">
+                <div class="info-card">
+                    <h3 class="fw-bold mb-4" style="color: var(--text-color);">📋 Your Placement Profile</h3>
+                    <div id="loadingProfile" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading Profile...</span>
+                        </div>
+                    </div>
+                    <div id="profileDetails" class="d-none">
+                        <div class="row mb-3 pb-3 border-bottom">
+                            <div class="col-sm-4 text-muted fw-semibold">Name</div>
+                            <div class="col-sm-8 fw-bold text-dark" id="profName">--</div>
+                        </div>
+                        <div class="row mb-3 pb-3 border-bottom">
+                            <div class="col-sm-4 text-muted fw-semibold">College</div>
+                            <div class="col-sm-8 text-dark" id="profCollege">--</div>
+                        </div>
+                        <div class="row mb-3 pb-3 border-bottom">
+                            <div class="col-sm-4 text-muted fw-semibold">Academic Branch</div>
+                            <div class="col-sm-8 text-dark" id="profBranch">--</div>
+                        </div>
+                        <div class="row mb-3 pb-3 border-bottom">
+                            <div class="col-sm-4 text-muted fw-semibold">Year of Study</div>
+                            <div class="col-sm-8 text-dark" id="profYear">--</div>
+                        </div>
+                        <div class="row mb-3 pb-3 border-bottom">
+                            <div class="col-sm-4 text-muted fw-semibold">Aptitude Skill Level</div>
+                            <div class="col-sm-8" id="profAptitude">--</div>
+                        </div>
+                        <div class="row mb-3 pb-3 border-bottom">
+                            <div class="col-sm-4 text-muted fw-semibold">DSA Skill Level</div>
+                            <div class="col-sm-8" id="profDSA">--</div>
+                        </div>
+                        <div class="row mb-3 pb-3 border-bottom">
+                            <div class="col-sm-4 text-muted fw-semibold">Target Timeline</div>
+                            <div class="col-sm-8 text-dark fw-bold" id="profTimeline">--</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-4 text-muted fw-semibold">Target Companies</div>
+                            <div class="col-sm-8" id="profCompanies">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Next Iteration Panel -->
+            <div class="col-md-5">
+                <div class="info-card d-flex flex-column justify-content-between">
+                    <div>
+                        <h3 class="fw-bold mb-3 text-success">✓ Onboarding Complete</h3>
+                        <p class="text-muted">Every question answer is saved successfully in the SQLite database.</p>
+                        
+                        <div class="alert alert-info border-0 rounded-4 mt-4" style="background-color: var(--primary-light);">
+                            <h5 class="fw-bold" style="color: var(--primary-color);">💡 Ready for Next Iteration</h5>
+                            <p class="mb-0 small text-secondary">The database is prepared with the necessary context data. In the next iteration, we will implement AI-powered placement roadmaps based on these saved answers!</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top">
+                        <a href="dashboard.html" class="btn btn-outline-primary w-100 rounded-pill py-2.5 fw-semibold">Go to Main Dashboard</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            try {
+                // Fetch user
+                const userRes = await fetch(`${API_BASE_URL}/users/me`, {
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
+                });
+                if (userRes.ok) {
+                    const userData = await userRes.json();
+                    document.getElementById('userDisplay').textContent = userData.username;
+                }
+
+                // Fetch placement profile details
+                const response = await fetch(`${API_BASE_URL}/placement-profile`, {
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    document.getElementById("profName").textContent = data.name;
+                    document.getElementById("profCollege").textContent = data.college;
+                    document.getElementById("profBranch").textContent = data.branch;
+                    document.getElementById("profYear").textContent = data.year;
+                    
+                    // Style levels
+                    const aptBadge = `<span class="badge ${data.aptitude_level === 'Advanced' ? 'bg-success' : data.aptitude_level === 'Intermediate' ? 'bg-warning text-dark' : 'bg-secondary'}">${data.aptitude_level}</span>`;
+                    document.getElementById("profAptitude").innerHTML = aptBadge;
+                    
+                    const dsaBadge = `<span class="badge ${data.dsa_level === 'Advanced' ? 'bg-success' : data.dsa_level === 'Intermediate' ? 'bg-warning text-dark' : 'bg-secondary'}">${data.dsa_level}</span>`;
+                    document.getElementById("profDSA").innerHTML = dsaBadge;
+                    
+                    document.getElementById("profTimeline").textContent = data.timeline;
+
+                    // Companies list
+                    const companiesList = document.getElementById("profCompanies");
+                    companiesList.innerHTML = "";
+                    if (data.target_companies) {
+                        data.target_companies.split(",").forEach(comp => {
+                            const badge = document.createElement("span");
+                            badge.className = "profile-badge";
+                            badge.textContent = comp.trim();
+                            companiesList.appendChild(badge);
+                        });
+                    } else {
+                        companiesList.textContent = "None selected";
+                    }
+
+                    // Toggle visibility
+                    document.getElementById("loadingProfile").classList.add("d-none");
+                    document.getElementById("profileDetails").classList.remove("d-none");
+                } else {
+                    // Profile not found -> redirect to placement questionnaire
+                    window.location.href = "placement_questionnaire.html";
+                }
+            } catch (error) {
+                console.error("Error loading placement profile:", error);
+                document.getElementById("loadingProfile").innerHTML = `<div class="alert alert-danger">Error loading profile data. Make sure backend is running.</div>`;
+            }
+        });
+    </script>
+</body>
+</html>

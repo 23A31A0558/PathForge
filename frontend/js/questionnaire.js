@@ -1,145 +1,248 @@
 // frontend/js/questionnaire.js
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const container = document.getElementById('questionsContainer');
-    const submitBtn = document.getElementById('submitBtn');
+    const form = document.getElementById('roadmapQuestionnaireForm');
     const formError = document.getElementById('formError');
-    const form = document.getElementById('questionnaireForm');
+    const submitBtn = document.getElementById('submitBtn');
 
-    // Fetch questions
-    try {
-        const response = await fetch(`${API_BASE_URL}/questions`, {
-            headers: { 
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + getToken()
+    // Pre-fill Career Goal from URL query parameter (from Career Discovery Quiz)
+    const urlParams = new URLSearchParams(window.location.search);
+    const roleParam = urlParams.get('role');
+    if (roleParam) {
+        const selectGoal = document.getElementById('inputCareerGoal');
+        if (selectGoal) {
+            let found = false;
+            for (let option of selectGoal.options) {
+                if (option.value.toLowerCase() === roleParam.toLowerCase()) {
+                    selectGoal.value = option.value;
+                    found = true;
+                    break;
+                }
             }
-        });
+            if (!found) {
+                const opt = document.createElement('option');
+                opt.value = roleParam;
+                opt.text = roleParam;
+                selectGoal.appendChild(opt);
+                selectGoal.value = roleParam;
+            }
+        }
+    }
 
-        if (handle401Error(response)) return;
+    // Set up Option Boxes (Single-select vs Multi-select Cards)
+    const optionBoxes = document.querySelectorAll('.option-box');
+    optionBoxes.forEach(card => {
+        const input = card.querySelector('input');
+        if (!input) return;
 
-        if (!response.ok) {
-            throw new Error('Failed to load questions from backend.');
+        // Make option card keyboard-focusable for accessibility
+        card.setAttribute('tabindex', '0');
+
+        // Sync initial state (e.g. on page reload / navigation back)
+        if (input.checked) {
+            card.classList.add('selected');
+            // If the checked input is 'lang_none', trigger its special behavior on load
+            if (input.id === 'lang_none') {
+                disableOtherLanguages();
+            }
         }
 
-        const questions = await response.json();
-        renderQuestions(questions);
-    } catch (error) {
-        container.innerHTML = `<div class="alert alert-danger">Error: ${error.message}. Is your backend running at ${API_BASE_URL}?</div>`;
-    }
+        // Card click handler
+        card.addEventListener('click', (e) => {
+            e.preventDefault(); // Stop native radio/checkbox click triggers to prevent double toggling
 
-    function renderQuestions(questions) {
-        container.innerHTML = '';
-        
-        questions.forEach((q, index) => {
-            const section = document.createElement('div');
-            section.className = 'question-section mb-4 p-4 border rounded bg-white shadow-sm';
-            
-            let optionsHtml = '';
-            q.options.forEach(opt => {
-                optionsHtml += `
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="radio" name="q_${q.id}" id="opt_${opt.id}" value="${opt.value}">
-                        <label class="form-check-label fs-6 text-secondary" for="opt_${opt.id}">
-                            ${opt.option_text}
-                        </label>
-                    </div>
-                `;
-            });
+            // Check if card is disabled
+            if (card.classList.contains('disabled')) {
+                // If it is disabled, clicking it should deselect the 'none' option, re-enable all, and select this one
+                if (input.name === 'languages' && input.id !== 'lang_none') {
+                    const noneInput = document.getElementById('lang_none');
+                    const noneCard = noneInput.closest('.option-box');
+                    noneInput.checked = false;
+                    noneCard.classList.remove('selected');
 
-            section.innerHTML = `
-                <h5 class="mb-3 fw-bold">${index + 1}. ${q.question_text}</h5>
-                ${optionsHtml}
-            `;
-            container.appendChild(section);
-        });
+                    enableAllLanguages();
 
-        submitBtn.classList.remove('d-none');
-    }
+                    // Select clicked option
+                    input.checked = true;
+                    card.classList.add('selected');
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                return;
+            }
 
-    // Submit Answers
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        formError.classList.add('d-none');
-
-        const inputs = Array.from(document.querySelectorAll('.question-section'));
-        const answers = [];
-        let allAnswered = true;
-
-        inputs.forEach(section => {
-            const checked = section.querySelector('input[type="radio"]:checked');
-            if (checked) {
-                const qId = checked.name.split('_')[1];
-                answers.push({
-                    question_id: parseInt(qId),
-                    selected_option: checked.value
-                });
-            } else {
-                allAnswered = false;
+            // Normal selection behavior
+            if (input.type === 'radio') {
+                // Single Select Logic
+                const wasChecked = input.checked;
+                if (wasChecked) {
+                    // Click selected -> deselect
+                    input.checked = false;
+                    card.classList.remove('selected');
+                } else {
+                    // Click unselected -> select and clear peers
+                    const peers = document.querySelectorAll(`input[name="${input.name}"]`);
+                    peers.forEach(p => {
+                        p.checked = false;
+                        p.closest('.option-box')?.classList.remove('selected');
+                    });
+                    input.checked = true;
+                    card.classList.add('selected');
+                }
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            } else if (input.type === 'checkbox') {
+                // Multiple Select Logic
+                if (input.id === 'lang_none') {
+                    input.checked = !input.checked;
+                    if (input.checked) {
+                        card.classList.add('selected');
+                        disableOtherLanguages();
+                    } else {
+                        card.classList.remove('selected');
+                        enableAllLanguages();
+                    }
+                } else {
+                    // Standard multi-select toggle
+                    input.checked = !input.checked;
+                    card.classList.toggle('selected', input.checked);
+                }
+                input.dispatchEvent(new Event('change', { bubbles: true }));
             }
         });
 
-        if (!allAnswered) {
-            formError.textContent = "Please answer all questions before submitting.";
+        // Sync visual selected state on manual change triggers
+        input.addEventListener('change', () => {
+            card.classList.toggle('selected', input.checked);
+        });
+
+        // Accessibility (Space and Enter keyboard events)
+        card.addEventListener('keydown', (e) => {
+            if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                card.click();
+            }
+        });
+    });
+
+    // Helper functions for Programming Languages question exclusivity
+    function disableOtherLanguages() {
+        const otherInputs = document.querySelectorAll("input[name='languages']");
+        otherInputs.forEach(otherInput => {
+            if (otherInput.id !== 'lang_none') {
+                otherInput.checked = false;
+                const otherCard = otherInput.closest('.option-box');
+                otherCard.classList.remove('selected');
+                otherCard.classList.add('disabled');
+                otherInput.disabled = true;
+                otherCard.setAttribute('title', "Disabled because 'I don't know any programming language' is selected.");
+            }
+        });
+    }
+
+    function enableAllLanguages() {
+        const otherInputs = document.querySelectorAll("input[name='languages']");
+        otherInputs.forEach(otherInput => {
+            otherInput.disabled = false;
+            const otherCard = otherInput.closest('.option-box');
+            otherCard.classList.remove('disabled');
+            otherCard.removeAttribute('title');
+        });
+    }
+
+    // Submit Questionnaire Form
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Clear previous error messages
+        formError.classList.add('d-none');
+        formError.textContent = '';
+        document.getElementById('skillLevelError').classList.add('d-none');
+
+        // Form fields resolution
+        const name = document.getElementById('inputName').value.trim();
+        const college = document.getElementById('inputCollege').value.trim();
+        const year = document.getElementById('inputYear').value;
+        const branch = document.getElementById('inputBranch').value.trim();
+        const primaryCareerGoal = document.getElementById('inputCareerGoal').value;
+        const dailyLearningTime = document.getElementById('inputDailyTime').value;
+        const targetTimeline = document.getElementById('inputTimeline').value;
+
+        // Custom validation: Programming Languages (Minimum 1 checked, no max restriction)
+        const selectedLangs = Array.from(document.querySelectorAll("input[name='languages']:checked")).map(el => el.value);
+        if (selectedLangs.length === 0) {
+            formError.textContent = "Please select at least one programming language option.";
             formError.classList.remove('d-none');
             formError.scrollIntoView({ behavior: 'smooth' });
             return;
         }
 
+        // Custom validation: Current Skill Level (Radio checked check)
+        const selectedSkill = document.querySelector("input[name='skill_level']:checked")?.value;
+        if (!selectedSkill) {
+            document.getElementById('skillLevelError').classList.remove('d-none');
+            formError.textContent = "Please select your current skill level.";
+            formError.classList.remove('d-none');
+            formError.scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+
+        // Bootstrap native field check validation
+        if (!form.checkValidity()) {
+            e.stopPropagation();
+            form.classList.add('was-validated');
+            formError.textContent = "Please fill in all required fields.";
+            formError.classList.remove('d-none');
+            formError.scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+
+        form.classList.add('was-validated');
+
+        // Compile payload matching schemas.RoadmapQuestionnaireCreate
+        const payload = {
+            name: name,
+            college: college,
+            year: year,
+            branch: branch,
+            programming_languages: selectedLangs,
+            primary_career_goal: primaryCareerGoal,
+            current_skill_level: selectedSkill,
+            daily_learning_time: dailyLearningTime,
+            target_timeline: targetTimeline
+        };
+
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Submitting...';
+        submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Saving Questionnaire & Generating Paths...`;
 
         try {
-            // POST /answers
-            const response = await fetch(`${API_BASE_URL}/answers`, {
+            // POST /questionnaire
+            const response = await fetch(`${API_BASE_URL}/questionnaire`, {
                 method: 'POST',
                 headers: {
                     "Content-Type": "application/json",
                     "Authorization": "Bearer " + getToken()
                 },
-                body: JSON.stringify({ answers: answers })
+                body: JSON.stringify(payload)
             });
 
             if (handle401Error(response)) return;
 
-            if (!response.ok) {
-                let errorMsg = 'Failed to submit answers.';
-                try {
-                    const errorData = await response.json();
-                    if (errorData.detail) {
-                        errorMsg = typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail);
-                    }
-                } catch(e) {}
-                throw new Error(`Backend Error: ${errorMsg}`);
+            const responseData = await response.json();
+            if (response.ok) {
+                // Success: Questionnaire saved, background AI generation started!
+                // Redirect directly to roadmap dashboard
+                window.location.href = 'roadmap.html';
+            } else {
+                formError.textContent = responseData.detail || "An error occurred while saving your questionnaire.";
+                formError.classList.remove('d-none');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Generate Roadmap Base';
             }
-
-            // Also trigger roadmap generation
-            const generateResponse = await fetch(`${API_BASE_URL}/generate-roadmap`, {
-                method: 'POST',
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer " + getToken()
-                }
-            });
-
-            if (handle401Error(generateResponse)) return;
-            
-            if (!generateResponse.ok) {
-                 let genErrorMsg = 'Roadmap generation failed.';
-                 try {
-                     const genData = await generateResponse.json();
-                     if (genData.detail) genErrorMsg = genData.detail;
-                 } catch(e) {}
-                 throw new Error(genErrorMsg);
-            }
-
-            // Redirect to roadmap.html on complete success
-            window.location.href = 'roadmap.html';
-
         } catch (error) {
-            formError.textContent = error.message;
+            formError.textContent = "Network error. Please make sure the backend is active.";
             formError.classList.remove('d-none');
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Generate My Path';
+            submitBtn.textContent = 'Generate Roadmap Base';
+            console.error(error);
         }
     });
 });

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PathForge - Placement Onboarding</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Custom style sheet -->
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .question-section {
+            background: #fff;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+        .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg border-bottom px-4" style="background-color: var(--primary-color);">
+        <a class="navbar-brand brand-logo text-white m-0 p-0" href="#">Path<span style="color: #60A5FA;">Forge</span></a>
+        <div class="ms-auto flex-row d-flex align-items-center">
+            <a href="welcome.html" class="btn btn-sm btn-outline-light rounded-pill px-3 me-2">Back</a>
+            <button class="btn btn-sm btn-outline-light rounded-pill px-3" id="logoutBtn">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container mt-5 mb-5" style="max-width: 800px;">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold" style="color: var(--primary-color);">Placement Prep Onboarding</h2>
+            <p class="text-muted">Enter your stats to prepare for campus recruitment and company interviews.</p>
+        </div>
+
+        <form id="placementQuestionnaireForm" class="needs-validation" novalidate>
+            <!-- Part 1: Personal Details -->
+            <div class="question-section">
+                <h4 class="fw-bold mb-4" style="color: var(--primary-color);">1. Personal Details</h4>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="inputName" class="form-label fw-semibold text-secondary">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="inputName" required placeholder="John Doe">
+                        <div class="invalid-feedback">Please enter your name.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputCollege" class="form-label fw-semibold text-secondary">College/University <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="inputCollege" required placeholder="University of Technology">
+                        <div class="invalid-feedback">Please enter your college.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputYear" class="form-label fw-semibold text-secondary">Year of Study <span class="text-danger">*</span></label>
+                        <select class="form-select" id="inputYear" required>
+                            <option value="" disabled selected>Select Year</option>
+                            <option value="1st Year">1st Year</option>
+                            <option value="2nd Year">2nd Year</option>
+                            <option value="3rd Year">3rd Year</option>
+                            <option value="4th Year">4th Year</option>
+                        </select>
+                        <div class="invalid-feedback">Please select your year.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputBranch" class="form-label fw-semibold text-secondary">Branch/Specialization <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="inputBranch" required placeholder="Computer Science / IT">
+                        <div class="invalid-feedback">Please enter your branch.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Part 2: Aptitude and DSA levels -->
+            <div class="question-section">
+                <h4 class="fw-bold mb-4" style="color: var(--primary-color);">2. Current Competencies</h4>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-secondary mb-3">Current Aptitude Level <span class="text-danger">*</span></label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="aptitude_level" id="apt_beg" value="Beginner" required>
+                            <label class="form-check-label fw-semibold text-secondary" for="apt_beg">Beginner</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="aptitude_level" id="apt_int" value="Intermediate" required>
+                            <label class="form-check-label fw-semibold text-secondary" for="apt_int">Intermediate</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="aptitude_level" id="apt_adv" value="Advanced" required>
+                            <label class="form-check-label fw-semibold text-secondary" for="apt_adv">Advanced</label>
+                        </div>
+                        <div class="text-danger small mt-2 d-none" id="aptError">Please select aptitude level.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-secondary mb-3">Current DSA Level <span class="text-danger">*</span></label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="dsa_level" id="dsa_beg" value="Beginner" required>
+                            <label class="form-check-label fw-semibold text-secondary" for="dsa_beg">Beginner</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="dsa_level" id="dsa_int" value="Intermediate" required>
+                            <label class="form-check-label fw-semibold text-secondary" for="dsa_int">Intermediate</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="dsa_level" id="dsa_adv" value="Advanced" required>
+                            <label class="form-check-label fw-semibold text-secondary" for="dsa_adv">Advanced</label>
+                        </div>
+                        <div class="text-danger small mt-2 d-none" id="dsaError">Please select DSA level.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Part 3: Target Companies -->
+            <div class="question-section">
+                <h4 class="fw-bold mb-2" style="color: var(--primary-color);">3. Target Companies</h4>
+                <p class="text-muted small mb-4">Select the companies you want to prepare for (Multi-select).</p>
+                <div id="companyError" class="text-danger small mb-3 d-none">Please select at least one company.</div>
+                <div class="row g-2">
+                    <div class="col-md-4 col-6">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_google" value="Google">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_google">Google</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_msft" value="Microsoft">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_msft">Microsoft</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_amazon" value="Amazon">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_amazon">Amazon</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_apple" value="Apple">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_apple">Apple</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_meta" value="Meta">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_meta">Meta</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_netflix" value="Netflix">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_netflix">Netflix</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-6">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_oracle" value="Oracle">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_oracle">Oracle</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_adobe" value="Adobe">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_adobe">Adobe</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_ibm" value="IBM">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_ibm">IBM</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_infosys" value="Infosys">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_infosys">Infosys</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_tcs" value="TCS">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_tcs">TCS</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_wipro" value="Wipro">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_wipro">Wipro</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-6">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_cog" value="Cognizant">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_cog">Cognizant</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_cap" value="Capgemini">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_cap">Capgemini</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_accenture" value="Accenture">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_accenture">Accenture</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_deloitte" value="Deloitte">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_deloitte">Deloitte</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_ey" value="EY">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_ey">EY</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="companies" id="comp_pwc" value="PwC">
+                            <label class="form-check-label fw-semibold text-secondary" for="comp_pwc">PwC</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Part 4: Preparation Timeline -->
+            <div class="question-section">
+                <h4 class="fw-bold mb-4" style="color: var(--primary-color);">4. Preparation Timeline</h4>
+                <div class="d-flex flex-column gap-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="timeline" id="time_3" value="3 Months" required>
+                        <label class="form-check-label fw-semibold text-secondary" for="time_3">3 Months (Fast-track preparation)</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="timeline" id="time_6" value="6 Months" required>
+                        <label class="form-check-label fw-semibold text-secondary" for="time_6">6 Months (Standard syllabus)</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="timeline" id="time_12" value="1 Year" required>
+                        <label class="form-check-label fw-semibold text-secondary" for="time_12">1 Year (Comprehensive foundation building)</label>
+                    </div>
+                    <div class="text-danger small mt-2 d-none" id="timelineError">Please select preparation timeline.</div>
+                </div>
+            </div>
+
+            <div id="formError" class="alert alert-danger d-none" role="alert"></div>
+
+            <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold text-uppercase fs-5" id="submitBtn">Save Placement Profile</button>
+        </form>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/placement_questionnaire.js"></script>
+</body>
+</html>

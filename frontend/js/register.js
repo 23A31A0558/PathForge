@@ -38,17 +38,38 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const payload = { username, email, password };
+        console.log("Registration request payload:", payload);
+        
+        const submitBtn = registerForm.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating Account...';
+        }
+
         try {
             const response = await fetch(`${API_BASE_URL}/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, email, password })
+                body: JSON.stringify(payload)
             });
 
-            const data = await response.json();
+            console.log("Registration response status:", response.status);
+            
+            const responseText = await response.text();
+            console.log("Registration response body:", responseText);
+
+            let data = null;
+            try {
+                data = JSON.parse(responseText);
+            } catch (jsonErr) {
+                // Response wasn't valid JSON (e.g. plain text or HTML)
+                console.warn("Response body is not valid JSON:", jsonErr);
+            }
 
             if (!response.ok) {
-                throw new Error(data.detail || 'Registration failed');
+                const errorMsg = (data && (data.detail || data.message)) || responseText || 'Registration failed';
+                throw new Error(errorMsg);
             }
 
             registerMessage.textContent = 'Account created successfully! Redirecting to login...';
@@ -60,9 +81,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 1500);
 
         } catch (error) {
+            console.error("Registration failed with error:", error);
             registerMessage.textContent = error.message;
             registerMessage.classList.add('alert-danger');
             registerMessage.classList.remove('d-none');
+            
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Account';
+            }
         }
     });
 });

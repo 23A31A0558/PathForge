@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
+import datetime
 from database import Base
 
 class User(Base):
@@ -10,6 +11,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     selected_roadmap_id = Column(Integer, nullable=True)
     questionnaire_completed = Column(Boolean, default=False)
+    onboarding_completed = Column(Boolean, default=False)
 
 
 class Question(Base):
@@ -39,6 +41,9 @@ class Roadmap(Base):
     title = Column(String)
     type = Column(String) # fast_track or deep_learning
     is_archived = Column(Boolean, default=False)
+    description = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    generated_by_ai = Column(Boolean, default=True)
 
 
 class MacroStep(Base):
@@ -124,4 +129,79 @@ class QuizAttempt(Base):
     score = Column(Integer)
     question_ids = Column(String, nullable=True) # comma separated list of question IDs served
     attempted_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class RoadmapQuestionnaire(Base):
+    __tablename__ = "roadmap_questionnaires"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, index=True)
+    name = Column(String)
+    college = Column(String)
+    year = Column(String)
+    branch = Column(String)
+    programming_languages = Column(String)  # Comma-separated string
+    primary_career_goal = Column(String)
+    current_skill_level = Column(String)
+    daily_learning_time = Column(String)
+    target_timeline = Column(String)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class CareerRecommendationQuiz(Base):
+    __tablename__ = "career_recommendation_quizzes"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, index=True)
+    activities = Column(String)  # Comma-separated string
+    subject = Column(String)
+    work_type = Column(String)
+    recommended_careers = Column(String)  # JSON-serialized list of recommendations
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class PlacementProfile(Base):
+    __tablename__ = "placement_profiles"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, index=True)
+    name = Column(String)
+    college = Column(String)
+    year = Column(String)
+    branch = Column(String)
+    aptitude_level = Column(String)
+    dsa_level = Column(String)
+    target_companies = Column(String)  # Comma-separated string
+    timeline = Column(String)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class RoadmapPhase(Base):
+    __tablename__ = "roadmap_phases"
+    id = Column(Integer, primary_key=True, index=True)
+    roadmap_id = Column(Integer, ForeignKey("roadmaps.id"), index=True)
+    phase_number = Column(Integer)
+    phase_title = Column(String)
+    estimated_duration = Column(String)
+
+
+class RoadmapTopic(Base):
+    __tablename__ = "roadmap_topics"
+    id = Column(Integer, primary_key=True, index=True)
+    phase_id = Column(Integer, ForeignKey("roadmap_phases.id"), index=True)
+    topic_title = Column(String)
+    difficulty = Column(String)
+    estimated_hours = Column(Integer)
+    resources_json = Column(String)  # JSON-serialized list of resource dicts
+    mini_project = Column(String, nullable=True)
+    quiz_required = Column(Boolean, default=False)
+    completed = Column(Boolean, default=False)
+    order_number = Column(Integer)
+
+
+class RoadmapGenerationStatus(Base):
+    __tablename__ = "roadmap_generation_status"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, index=True)
+    status = Column(String)  # NOT_STARTED, GENERATING, READY, FAILED
+    error_message = Column(String, nullable=True)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow)
+
 

@@ -186,75 +186,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const trackSwitcherMenu = document.getElementById('trackSwitcherMenu');
 
     async function init() {
+        await initJourneyManager(async (newRoadmapId) => {
+            activeRoadmapId = newRoadmapId;
+            await loadUser();
+            await loadRoadmap();
+            await loadProgress();
+            await loadScore();
+            await loadSuggestions();
+            renderJourneyMap();
+        });
+        
         await loadUser();
+        if (userDetails) {
+            activeRoadmapId = userDetails.selected_roadmap_id;
+        }
         await loadRoadmap();
         await loadProgress();
         await loadScore();
         await loadSuggestions();
-        
-        setupTrackSwitcher();
         renderJourneyMap();
-    }
-
-    function setupTrackSwitcher() {
-        if (!trackSwitcherBtn || !trackSwitcherMenu || !roadmapData || roadmapData.length === 0) return;
-        trackSwitcherMenu.innerHTML = '';
-        
-        let activeRoadmap = null;
-        if (userDetails && userDetails.selected_roadmap_id) {
-            activeRoadmap = roadmapData.find(r => r.id === userDetails.selected_roadmap_id);
-        }
-        
-        if (!activeRoadmap) {
-            activeRoadmap = roadmapData[0];
-            activeRoadmapId = activeRoadmap.id;
-        } else {
-            activeRoadmapId = activeRoadmap.id;
-        }
-
-        trackSwitcherBtn.innerText = `Track: ${activeRoadmap.title}`;
-
-        roadmapData.forEach(r => {
-            const li = document.createElement('li');
-            const a = document.createElement('a');
-            a.className = `dropdown-item fw-semibold ${r.id === activeRoadmapId ? 'active' : ''}`;
-            a.href = '#';
-            a.innerText = r.title;
-            
-            a.addEventListener('click', async (e) => {
-                e.preventDefault();
-                await selectTrack(r.id);
-            });
-            
-            li.appendChild(a);
-            trackSwitcherMenu.appendChild(li);
-        });
-    }
-
-    async function selectTrack(roadmapId) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/users/select-roadmap`, {
-                method: 'POST',
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer " + getToken()
-                },
-                body: JSON.stringify({ roadmap_id: roadmapId })
-            });
-
-            if (handle401Error(response)) return;
-            if (response.ok) {
-                if (userDetails) {
-                    userDetails.selected_roadmap_id = roadmapId;
-                }
-                setupTrackSwitcher();
-                renderJourneyMap();
-            } else {
-                console.error("Failed to select roadmap");
-            }
-        } catch (error) {
-            console.error("Error selecting track:", error);
-        }
     }
 
     async function loadUser() {
@@ -274,8 +224,98 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadRoadmap() {
+        const canvasLoader = document.getElementById('canvasLoader');
+        const loaderText = canvasLoader ? canvasLoader.querySelector('p') : null;
+        const loaderSpinner = canvasLoader ? canvasLoader.querySelector('.spinner-border') : null;
+
+        const checkStatus = async () => {
+            try {
+                let res = await fetch(`${API_BASE_URL}/roadmap/status`, {
+                    headers: { "Authorization": "Bearer " + getToken() }
+                });
+                if (handle401Error(res)) return null;
+                if (!res.ok) return null;
+                return await res.json();
+            } catch (err) {
+                console.error("Status check error:", err);
+                return null;
+            }
+        };
+
+        let statusData = await checkStatus();
+        if (!statusData) {
+            if (loaderText) loaderText.textContent = "Failed to connect to API server.";
+            return;
+        }
+
+        if (statusData.status === 'GENERATING') {
+            if (canvasLoader) canvasLoader.classList.remove('d-none');
+            if (loaderSpinner) loaderSpinner.classList.remove('d-none');
+            if (loaderText) loaderText.textContent = "Generating AI Roadmap... (~10s) Please wait.";
+            
+            // Poll every 2 seconds
+            while (true) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                statusData = await checkStatus();
+                if (!statusData) return;
+                if (statusData.status !== 'GENERATING') {
+                    break;
+                }
+            }
+        }
+
+        if (statusData.status === 'FAILED') {
+            if (canvasLoader) canvasLoader.classList.remove('d-none');
+            if (loaderSpinner) loaderSpinner.classList.add('d-none');
+            if (loaderText) {
+                loaderText.innerHTML = `<span class="text-danger fw-bold">Roadmap generation failed.</span><br>
+                <small class="text-muted">${statusData.error_message || ''}</small><br>
+                <button class="btn btn-sm btn-outline-danger mt-3 px-3 rounded-pill fw-bold" id="retryGenerateBtn">Retry</button>`;
+                
+                const retryBtn = document.getElementById('retryGenerateBtn');
+                if (retryBtn) {
+                    retryBtn.addEventListener('click', async () => {
+                        loaderText.textContent = "Generating AI Roadmap...";
+                        if (loaderSpinner) loaderSpinner.classList.remove('d-none');
+                        
+                        try {
+                            const genRes = await fetch(`${API_BASE_URL}/roadmap/generate`, {
+                                method: 'POST',
+                                headers: { "Authorization": "Bearer " + getToken() }
+                            });
+                            if (handle401Error(genRes)) return;
+                            location.reload();
+                        } catch (err) {
+                            console.error("Failed to retry roadmap generation:", err);
+                            loaderText.textContent = "Failed to trigger retry. Make sure backend is active.";
+                            if (loaderSpinner) loaderSpinner.classList.add('d-none');
+                        }
+                    });
+                }
+            }
+            return;
+        }
+
+        if (statusData.status === 'NOT_STARTED') {
+            if (canvasLoader) canvasLoader.classList.remove('d-none');
+            if (loaderSpinner) loaderSpinner.classList.remove('d-none');
+            if (loaderText) loaderText.textContent = "Generating AI Roadmap...";
+            
+            const genRes = await fetch(`${API_BASE_URL}/roadmap/generate`, {
+                method: 'POST',
+                headers: { "Authorization": "Bearer " + getToken() }
+            });
+            if (handle401Error(genRes)) return;
+            
+            // Re-run status checking loop recursively
+            await loadRoadmap();
+            return;
+        }
+
+        // Status is READY: fetch the generated roadmap
         try {
-            let response = await fetch(`${API_BASE_URL}/roadmap`, {
+            const url = activeRoadmapId ? `${API_BASE_URL}/roadmap/${activeRoadmapId}` : `${API_BASE_URL}/roadmap`;
+            let response = await fetch(url, {
                 method: 'GET',
                 headers: { 
                     "Content-Type": "application/json",
@@ -286,25 +326,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (handle401Error(response)) return;
             if (!response.ok) throw new Error('Failed to fetch roadmap.');
 
-            roadmapData = await response.json();
-            
-            if (roadmapData.length === 0) {
-                // Trigger auto generation if empty
-                const genRes = await fetch(`${API_BASE_URL}/generate-roadmap`, {
-                    method: 'POST',
-                    headers: { "Authorization": "Bearer " + getToken() }
-                });
-                if (handle401Error(genRes)) return;
-                
-                if (genRes.ok) {
-                    const retryRes = await fetch(`${API_BASE_URL}/roadmap`, {
-                        headers: { "Authorization": "Bearer " + getToken() }
-                    });
-                    roadmapData = await retryRes.json();
-                }
+            const resData = await response.json();
+            if (Array.isArray(resData)) {
+                roadmapData = resData;
+            } else {
+                roadmapData = [resData];
             }
+            if (canvasLoader) canvasLoader.classList.add('d-none');
         } catch (error) {
             console.error('Roadmap fetch error:', error);
+            if (loaderText) loaderText.textContent = "Error loading roadmap data.";
         }
     }
 
@@ -390,12 +421,12 @@ document.addEventListener('DOMContentLoaded', () => {
         nodesContainer.innerHTML = '';
 
         if (!roadmapData || roadmapData.length === 0) {
-            nodesContainer.innerHTML = '<div class="alert alert-info m-4">No active curriculum found. Please complete the questionnaire first.</div>';
+            nodesContainer.innerHTML = '<div class="alert alert-info m-4">No roadmap generated</div>';
             return;
         }
 
         // Find active/selected roadmap
-        const rmap = roadmapData.find(r => r.id === activeRoadmapId) || roadmapData[0];
+        const rmap = roadmapData.find(r => r.id === activeRoadmapId) || [...roadmapData].sort((a, b) => b.id - a.id)[0];
         if (journeyTitle) journeyTitle.innerText = rmap.title;
 
         // Flatten all micro steps from macro sections in order
@@ -480,14 +511,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (nodeIdx < currentIdx) status = "completed";
             else if (nodeIdx === currentIdx) status = "current";
 
-            // Load Rich Topic Metadata
-            const details = TOPIC_DETAILS[step.title] || {
+            // Load Rich Topic Metadata dynamically from step values returned by AI
+            const details = {
                 icon: step.title.substring(0, 3),
-                desc: step.description,
-                time: "1 hour",
-                diff: step.difficulty,
-                quizzes: 5,
-                resources: [{ type: "video", title: "Topic Tutorial", url: step.resource_link }]
+                desc: step.description || `Master the concepts of ${step.title}.`,
+                time: `${step.estimated_hours || 1} hours`,
+                diff: step.difficulty || "Medium",
+                quizzes: step.quiz_required ? 1 : 0,
+                resources: step.resources || []
             };
 
             const stepIcon = status === "completed" ? `<i class="bi bi-check-lg text-white"></i>` : 
@@ -500,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 status: status,
                 icon: stepIcon,
                 time: details.time,
-                diff: step.difficulty,
+                diff: step.difficulty || "Medium",
                 quizzes: details.quizzes,
                 resourcesCount: details.resources.length
             });
@@ -528,13 +559,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Auto select current active node on launch
         if (currentIdx > 0 && currentIdx <= steps.length) {
             const activeStep = steps[currentIdx - 1];
-            const activeDetails = TOPIC_DETAILS[activeStep.title] || {
+            const activeDetails = {
                 icon: activeStep.title.substring(0, 3),
-                desc: activeStep.description,
-                time: "1 hour",
-                diff: activeStep.difficulty,
-                quizzes: 5,
-                resources: [{ type: "video", title: "Topic Tutorial", url: activeStep.resource_link }]
+                desc: activeStep.description || `Master the concepts of ${activeStep.title}.`,
+                time: `${activeStep.estimated_hours || 1} hours`,
+                diff: activeStep.difficulty || "Medium",
+                quizzes: activeStep.quiz_required ? 1 : 0,
+                resources: activeStep.resources || []
             };
             let status = "current";
             selectJourneyStep(activeStep, activeDetails, status);
@@ -618,8 +649,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Mini project
-        if (panelProjectTitle) panelProjectTitle.innerText = details.project || "Mini Project Challenge";
-        if (panelProjectDesc) panelProjectDesc.innerText = details.projectDesc || "Build a project matching this checkpoint's curriculum.";
+        if (panelProjectTitle) panelProjectTitle.innerText = step.mini_project || "None";
+        if (panelProjectDesc) panelProjectDesc.innerText = step.mini_project ? `Build a ${step.mini_project} to demonstrate your knowledge.` : "No project required.";
 
         // Notes loading
         if (panelNotesArea) {
@@ -749,6 +780,57 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error("Error completing step:", error);
                     alert("Network error. Please try again.");
                 }
+            }
+        });
+    }
+
+    // Regenerate roadmap handler
+    const regenerateRoadmapBtn = document.getElementById('regenerateRoadmapBtn');
+    if (regenerateRoadmapBtn) {
+        regenerateRoadmapBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const confirmed = confirm("Are you sure you want to regenerate your roadmap? This will delete your current progress.");
+            if (!confirmed) return;
+
+            regenerateRoadmapBtn.disabled = true;
+            regenerateRoadmapBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Regenerating...`;
+
+            try {
+                const url = activeRoadmapId ? `${API_BASE_URL}/roadmap/regenerate/${activeRoadmapId}` : `${API_BASE_URL}/roadmap/regenerate`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        "Authorization": "Bearer " + getToken()
+                    }
+                });
+
+                if (handle401Error(response)) return;
+
+                if (response.ok) {
+                    alert("Roadmap regenerated successfully!");
+                    // Reload-less UI refresh
+                    await loadUser();
+                    if (userDetails) {
+                        activeRoadmapId = userDetails.selected_roadmap_id;
+                    }
+                    if (typeof refreshJourneyManager === 'function') {
+                        await refreshJourneyManager();
+                    }
+                    await loadRoadmap();
+                    await loadProgress();
+                    await loadScore();
+                    await loadSuggestions();
+                    renderJourneyMap();
+                } else {
+                    const err = await response.json();
+                    alert("Error: " + (err.detail || "Failed to regenerate roadmap."));
+                }
+            } catch (error) {
+                console.error("Error regenerating roadmap:", error);
+                alert("Network error. Please try again.");
+            } finally {
+                regenerateRoadmapBtn.disabled = false;
+                regenerateRoadmapBtn.innerHTML = `<i class="bi bi-arrow-clockwise"></i> Regenerate`;
             }
         });
     }

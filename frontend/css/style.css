@@ -568,3 +568,59 @@ body {
 .progress-banner-card, .roadmap-canvas-wrapper, .details-panel-card {
     animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
+
+/* Onboarding Question Cards/Chips CSS Rules */
+.needs-validation .form-check, 
+#placementQuestionnaireForm .form-check {
+    position: relative;
+    display: block;
+    padding: 1.1rem 1.4rem;
+    margin-bottom: 1rem;
+    background-color: #fff;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    outline: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.needs-validation .form-check:hover,
+#placementQuestionnaireForm .form-check:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 6px 16px rgba(79, 70, 229, 0.08);
+    transform: translateY(-2px);
+}
+
+.needs-validation .form-check:focus-within,
+#placementQuestionnaireForm .form-check:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25);
+}
+
+/* Selected active state for cards/chips */
+.needs-validation .form-check.selected,
+#placementQuestionnaireForm .form-check.selected {
+    border-color: var(--primary-color);
+    background-color: var(--primary-light);
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.15);
+    transform: scale(1.02);
+}
+
+.needs-validation .form-check.selected label,
+#placementQuestionnaireForm .form-check.selected label {
+    color: var(--primary-color) !important;
+}
+
+/* Hide native controls while keeping them in the DOM for validation/accessibility */
+.needs-validation .form-check-input,
+#placementQuestionnaireForm .form-check-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
