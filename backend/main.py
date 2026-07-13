@@ -522,10 +522,10 @@ def save_roadmap_questionnaire(
     
     # Check limit of active roadmaps
     active_count = db.query(models.Roadmap).filter(models.Roadmap.user_id == current_user.id, models.Roadmap.is_archived == False).count()
-    if active_count >= 10:
+    if active_count >= 20:
         raise HTTPException(
             status_code=400,
-            detail="Maximum active roadmap limit reached (10). Please archive or delete an existing roadmap before adding a new one."
+            detail="Maximum active roadmap limit reached (20). Please archive or delete an existing roadmap before adding a new one."
         )
         
     try:

@@ -170,11 +170,18 @@ function buildDropdownMenu() {
         trackSwitcherBtn.innerText = "Select Journey";
     }
     
-    // Populate active roadmaps list
+    // Create scrollable container elements
+    const scrollLi = document.createElement('li');
+    const scrollUl = document.createElement('ul');
+    scrollUl.className = 'dropdown-menu-scrollable-list list-unstyled p-0 m-0';
+    scrollLi.appendChild(scrollUl);
+    trackSwitcherMenu.appendChild(scrollLi);
+    
+    // Populate active roadmaps list inside scrollUl
     if (activeRoadmaps.length === 0) {
         const li = document.createElement('li');
         li.innerHTML = `<span class="dropdown-item-text text-muted small fw-semibold">No active journeys. Create one!</span>`;
-        trackSwitcherMenu.appendChild(li);
+        scrollUl.appendChild(li);
     } else {
         activeRoadmaps.forEach(r => {
             const li = document.createElement('li');
@@ -193,27 +200,42 @@ function buildDropdownMenu() {
             });
             
             li.appendChild(a);
-            trackSwitcherMenu.appendChild(li);
+            scrollUl.appendChild(li);
         });
     }
     
-    // Add divider
+    // Setup listener to scroll active item into view when dropdown opens
+    const parentDropdown = trackSwitcherBtn.closest('.dropdown');
+    if (parentDropdown && !parentDropdown.dataset.dropdownListenerAttached) {
+        parentDropdown.addEventListener('shown.bs.dropdown', () => {
+            const scrollList = parentDropdown.querySelector('.dropdown-menu-scrollable-list');
+            if (scrollList) {
+                const activeItem = scrollList.querySelector('.dropdown-item.active');
+                if (activeItem) {
+                    activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            }
+        });
+        parentDropdown.dataset.dropdownListenerAttached = 'true';
+    }
+    
+    // Add divider directly to main trackSwitcherMenu (outside scrollUl)
     const dividerLi = document.createElement('li');
     dividerLi.innerHTML = `<hr class="dropdown-divider">`;
     trackSwitcherMenu.appendChild(dividerLi);
     
-    // Add "➕ Add New Learning Journey" action
+    // Add "➕ Add New Learning Journey" action directly to trackSwitcherMenu
     const addLi = document.createElement('li');
     const addA = document.createElement('a');
     addA.href = 'questionnaire.html';
     
-    // Enforce 10-limit check
-    if (activeRoadmaps.length >= 10) {
+    // Enforce 20-limit check
+    if (activeRoadmaps.length >= 20) {
         addA.className = "dropdown-item fw-bold text-muted disabled";
         addA.style.opacity = "0.5";
         addA.style.pointerEvents = "none";
-        addA.innerHTML = `<i class="bi bi-plus-circle-fill me-2 text-muted"></i> Add Journey (Limit Reached: 10)`;
-        addA.setAttribute('title', "Maximum roadmap limit of 10 reached.");
+        addA.innerHTML = `<i class="bi bi-plus-circle-fill me-2 text-muted"></i> Add Journey (Limit Reached: 20)`;
+        addA.setAttribute('title', "Maximum roadmap limit of 20 reached.");
     } else {
         addA.className = "dropdown-item fw-bold text-primary";
         addA.innerHTML = `<i class="bi bi-plus-circle-fill me-2"></i> Add New Learning Journey`;
@@ -222,7 +244,7 @@ function buildDropdownMenu() {
     addLi.appendChild(addA);
     trackSwitcherMenu.appendChild(addLi);
     
-    // Add "📦 Archived Roadmaps" action
+    // Add "📦 Archived Roadmaps" action directly to trackSwitcherMenu
     const archiveLi = document.createElement('li');
     const archiveA = document.createElement('a');
     archiveA.className = "dropdown-item fw-semibold text-secondary";
@@ -236,7 +258,7 @@ function buildDropdownMenu() {
     archiveLi.appendChild(archiveA);
     trackSwitcherMenu.appendChild(archiveLi);
     
-    // Add "⚙ Manage Roadmaps" action
+    // Add "⚙ Manage Roadmaps" action directly to trackSwitcherMenu
     const manageLi = document.createElement('li');
     const manageA = document.createElement('a');
     manageA.className = "dropdown-item fw-semibold text-secondary";
@@ -289,6 +311,15 @@ async function selectTrack(roadmapId) {
             await refreshJourneyManager();
             if (onSwitchCallback) {
                 await onSwitchCallback(roadmapId);
+            }
+            
+            // Programmatically hide the dropdown
+            const trackSwitcherBtn = document.getElementById('trackSwitcherBtn');
+            if (trackSwitcherBtn) {
+                const dropdownInstance = bootstrap.Dropdown.getInstance(trackSwitcherBtn);
+                if (dropdownInstance) {
+                    dropdownInstance.hide();
+                }
             }
         }
     } catch (error) {
