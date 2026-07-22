@@ -109,6 +109,8 @@ class Quiz(Base):
     id = Column(Integer, primary_key=True, index=True)
     micro_step_id = Column(Integer, index=True)
     topic_name = Column(String)
+    user_id = Column(Integer, index=True, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class QuizQuestion(Base):
     __tablename__ = "quiz_questions"
@@ -120,6 +122,7 @@ class QuizQuestion(Base):
     option_c = Column(String)
     option_d = Column(String)
     correct_answer = Column(String) # Stores "option_a", "option_b", "option_c", or "option_d"
+    explanation = Column(String, nullable=True)
 
 class QuizAttempt(Base):
     __tablename__ = "quiz_attempts"

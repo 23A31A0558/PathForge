@@ -180,7 +180,7 @@ function buildDropdownMenu() {
     // Populate active roadmaps list inside scrollUl
     if (activeRoadmaps.length === 0) {
         const li = document.createElement('li');
-        li.innerHTML = `<span class="dropdown-item-text text-muted small fw-semibold">No active journeys. Create one!</span>`;
+        li.innerHTML = `<span class="dropdown-item-text text-muted small fw-semibold">No active paths. Create one!</span>`;
         scrollUl.appendChild(li);
     } else {
         activeRoadmaps.forEach(r => {
@@ -227,7 +227,7 @@ function buildDropdownMenu() {
     // Add "➕ Add New Learning Journey" action directly to trackSwitcherMenu
     const addLi = document.createElement('li');
     const addA = document.createElement('a');
-    addA.href = 'questionnaire.html';
+    addA.href = 'questionnaire.html?new=true';
     
     // Enforce 20-limit check
     if (activeRoadmaps.length >= 20) {
@@ -238,7 +238,7 @@ function buildDropdownMenu() {
         addA.setAttribute('title', "Maximum roadmap limit of 20 reached.");
     } else {
         addA.className = "dropdown-item fw-bold text-primary";
-        addA.innerHTML = `<i class="bi bi-plus-circle-fill me-2"></i> Add New Learning Journey`;
+        addA.innerHTML = `<i class="bi bi-plus-circle-fill me-2"></i> + Add New Path`;
     }
     
     addLi.appendChild(addA);
@@ -249,7 +249,7 @@ function buildDropdownMenu() {
     const archiveA = document.createElement('a');
     archiveA.className = "dropdown-item fw-semibold text-secondary";
     archiveA.href = "#";
-    archiveA.innerHTML = `<i class="bi bi-archive-fill me-2"></i> Archived Roadmaps`;
+    archiveA.innerHTML = `<i class="bi bi-archive-fill me-2"></i> Archived Paths`;
     archiveA.addEventListener('click', (e) => {
         e.preventDefault();
         const modal = new bootstrap.Modal(document.getElementById('archivedRoadmapsModal'));
@@ -263,7 +263,7 @@ function buildDropdownMenu() {
     const manageA = document.createElement('a');
     manageA.className = "dropdown-item fw-semibold text-secondary";
     manageA.href = "#";
-    manageA.innerHTML = `<i class="bi bi-gear-fill me-2"></i> Manage Roadmaps`;
+    manageA.innerHTML = `<i class="bi bi-gear-fill me-2"></i> Manage Paths`;
     manageA.addEventListener('click', (e) => {
         e.preventDefault();
         const modal = new bootstrap.Modal(document.getElementById('manageRoadmapsModal'));
@@ -335,7 +335,7 @@ function populateManageModal() {
     const activeRoadmaps = roadmapData.filter(r => !r.is_archived);
     
     if (activeRoadmaps.length === 0) {
-        listContainer.innerHTML = `<p class="text-muted text-center py-3">No active learning journeys found.</p>`;
+        listContainer.innerHTML = `<p class="text-muted text-center py-3">No active paths found.</p>`;
         return;
     }
     
@@ -375,7 +375,7 @@ function populateArchivedModal() {
     const archivedRoadmaps = roadmapData.filter(r => r.is_archived);
     
     if (archivedRoadmaps.length === 0) {
-        listContainer.innerHTML = `<p class="text-muted text-center py-3">No archived learning journeys found.</p>`;
+        listContainer.innerHTML = `<p class="text-muted text-center py-3">No archived paths found.</p>`;
         return;
     }
     
@@ -408,7 +408,7 @@ function populateArchivedModal() {
 }
 
 window.renameJourney = async function(id, currentTitle) {
-    const newTitle = prompt("Enter new title for this learning journey:", currentTitle);
+    const newTitle = prompt("Enter new title for this path:", currentTitle);
     if (newTitle === null) return; // Cancelled
     const trimmed = newTitle.trim();
     if (!trimmed) {
@@ -467,7 +467,7 @@ window.archiveJourney = async function(id) {
 };
 
 window.deleteJourney = async function(id, title) {
-    const confirmDelete = confirm(`Are you sure you want to permanently delete the learning journey: "${title}"?\n\nThis action is permanent and cannot be undone.`);
+    const confirmDelete = confirm(`Are you sure you want to permanently delete the path: "${title}"?\n\nThis action is permanent and cannot be undone.`);
     if (!confirmDelete) return;
     
     try {
@@ -486,7 +486,7 @@ window.deleteJourney = async function(id, title) {
                 await onSwitchCallback(data.selected_roadmap_id);
             }
         } else {
-            alert("Failed to delete journey");
+            alert("Failed to delete path");
         }
     } catch (e) {
         console.error(e);
@@ -503,7 +503,7 @@ function injectModalHTML() {
                 <div class="modal-content shadow border-0" style="border-radius: 16px;">
                     <div class="modal-header border-bottom-0 pt-4 px-4">
                         <h5 class="modal-title fw-bold" id="manageRoadmapsModalLabel" style="color: var(--text-color);">
-                            <i class="bi bi-gear-fill me-2 text-primary"></i>Manage Learning Journeys
+                            <i class="bi bi-gear-fill me-2 text-primary"></i>Manage Paths
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
@@ -523,7 +523,7 @@ function injectModalHTML() {
                 <div class="modal-content shadow border-0" style="border-radius: 16px;">
                     <div class="modal-header border-bottom-0 pt-4 px-4">
                         <h5 class="modal-title fw-bold" id="archivedRoadmapsModalLabel" style="color: var(--text-color);">
-                            <i class="bi bi-archive-fill me-2 text-secondary"></i>Archived Journeys
+                            <i class="bi bi-archive-fill me-2 text-secondary"></i>Archived Paths
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>

@@ -137,61 +137,30 @@
     <script>
         document.addEventListener("DOMContentLoaded", async () => {
             try {
-                // Fetch user
-                const userRes = await fetch(`${API_BASE_URL}/users/me`, {
-                    headers: { 'Authorization': `Bearer ${getToken()}` }
-                });
-                if (userRes.ok) {
-                    const userData = await userRes.json();
-                    document.getElementById('userDisplay').textContent = userData.username;
-                }
-
-                // Fetch placement profile details
+                // Fetch placement profile details first to check if they completed onboarding
                 const response = await fetch(`${API_BASE_URL}/placement-profile`, {
                     headers: { 'Authorization': `Bearer ${getToken()}` }
                 });
 
                 if (response.ok) {
-                    const data = await response.json();
-                    
-                    document.getElementById("profName").textContent = data.name;
-                    document.getElementById("profCollege").textContent = data.college;
-                    document.getElementById("profBranch").textContent = data.branch;
-                    document.getElementById("profYear").textContent = data.year;
-                    
-                    // Style levels
-                    const aptBadge = `<span class="badge ${data.aptitude_level === 'Advanced' ? 'bg-success' : data.aptitude_level === 'Intermediate' ? 'bg-warning text-dark' : 'bg-secondary'}">${data.aptitude_level}</span>`;
-                    document.getElementById("profAptitude").innerHTML = aptBadge;
-                    
-                    const dsaBadge = `<span class="badge ${data.dsa_level === 'Advanced' ? 'bg-success' : data.dsa_level === 'Intermediate' ? 'bg-warning text-dark' : 'bg-secondary'}">${data.dsa_level}</span>`;
-                    document.getElementById("profDSA").innerHTML = dsaBadge;
-                    
-                    document.getElementById("profTimeline").textContent = data.timeline;
-
-                    // Companies list
-                    const companiesList = document.getElementById("profCompanies");
-                    companiesList.innerHTML = "";
-                    if (data.target_companies) {
-                        data.target_companies.split(",").forEach(comp => {
-                            const badge = document.createElement("span");
-                            badge.className = "profile-badge";
-                            badge.textContent = comp.trim();
-                            companiesList.appendChild(badge);
-                        });
-                    } else {
-                        companiesList.textContent = "None selected";
+                    // Profile exists, check if a placement roadmap is generated
+                    const roadmapRes = await fetch(`${API_BASE_URL}/placement-roadmap`, {
+                        headers: { 'Authorization': `Bearer ${getToken()}` }
+                    });
+                    if (roadmapRes.ok) {
+                        // Yes! Redirect directly to the roadmap view
+                        window.location.href = "roadmap.html?type=placement";
+                        return;
                     }
-
-                    // Toggle visibility
-                    document.getElementById("loadingProfile").classList.add("d-none");
-                    document.getElementById("profileDetails").classList.remove("d-none");
+                    // Profile exists but no roadmap yet -> questionnaire to generate one
+                    window.location.href = "placement_questionnaire.html";
                 } else {
                     // Profile not found -> redirect to placement questionnaire
                     window.location.href = "placement_questionnaire.html";
                 }
             } catch (error) {
                 console.error("Error loading placement profile:", error);
-                document.getElementById("loadingProfile").innerHTML = `<div class="alert alert-danger">Error loading profile data. Make sure backend is running.</div>`;
+                window.location.href = "placement_questionnaire.html";
             }
         });
     </script>

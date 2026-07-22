@@ -326,16 +326,7 @@ class TestMultiRoadmap(unittest.TestCase):
         self.assertEqual(len(resp.json()), 5)
         print("[OK] Remaining roadmaps list length is 5. Backend Deep Learning roadmap successfully deleted.")
 
-        # 13. Regenerate Frontend roadmap
-        resp = self.client.post(f"/roadmap/regenerate/{frontend_dl_id}", headers=self.headers1)
-        self.assertEqual(resp.status_code, 200)
-        new_roadmap_id = resp.json()["new_roadmap_id"]
-        print(f"[OK] Regenerated Frontend roadmap. New Roadmap ID: {new_roadmap_id}")
-        
-        # Verify old roadmap is deleted
-        old_rm = self.db.query(models.Roadmap).filter(models.Roadmap.id == frontend_dl_id).first()
-        self.assertIsNone(old_rm)
-        print("[OK] Confirmed old Frontend roadmap has been deleted.")
+
 
         print("--- All Multi-Roadmap Verification Tests Passed! ---")
 

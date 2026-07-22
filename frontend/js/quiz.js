@@ -3,10 +3,18 @@
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const microStepId = parseInt(urlParams.get('micro_step_id'));
+    const isPlacement = urlParams.get('type') === 'placement';
+
+    // Preserve placement parameter for links returning to the roadmap
+    if (isPlacement) {
+        document.querySelectorAll('a[href="roadmap.html"]').forEach(link => {
+            link.href = "roadmap.html?type=placement";
+        });
+    }
 
     if (!microStepId) {
         alert("Invalid micro step ID. Redirecting to roadmap...");
-        window.location.href = "roadmap.html";
+        window.location.href = isPlacement ? "roadmap.html?type=placement" : "roadmap.html";
         return;
     }
 

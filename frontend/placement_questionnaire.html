@@ -34,7 +34,7 @@
         </div>
     </nav>
 
-    <div class="container mt-5 mb-5" style="max-width: 800px;">
+    <div id="questionnaireContent" class="container mt-5 mb-5" style="max-width: 800px; transition: opacity 0.3s ease-out;">
         <div class="text-center mb-5">
             <h2 class="fw-bold" style="color: var(--primary-color);">Placement Prep Onboarding</h2>
             <p class="text-muted">Enter your stats to prepare for campus recruitment and company interviews.</p>
@@ -222,8 +222,78 @@
 
             <div id="formError" class="alert alert-danger d-none" role="alert"></div>
 
-            <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold text-uppercase fs-5" id="submitBtn">Save Placement Profile</button>
+            <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold text-uppercase fs-5" id="submitBtn">Generate Placement Roadmap</button>
         </form>
+    </div>
+
+    <!-- Premium AI Generation Loading Overlay -->
+    <div id="aiLoadingContainer" class="d-none" style="opacity: 0; transition: opacity 0.3s ease-in;">
+        <div id="particleBg"></div>
+        <div class="loading-content text-center">
+            <div class="loading-logo mb-4">
+                Path<span>Forge</span><span class="ai-badge">AI</span>
+            </div>
+            <h2 class="loading-title fw-bold">Crafting Your Personalized Placement Roadmap...</h2>
+            <p class="loading-subtitle text-muted">Our AI is analyzing your competencies and target companies to construct your preparation plan.</p>
+            
+            <div class="row justify-content-center align-items-stretch mt-5 g-4" style="max-width: 900px; margin: 0 auto;">
+                <div class="col-md-5">
+                    <div class="ai-status-card text-start h-100">
+                        <div class="card-header-custom d-flex align-items-center justify-content-between mb-3">
+                            <span class="fw-bold">🧠 AI Status</span>
+                            <span class="status-badge pulse">Processing</span>
+                        </div>
+                        <div class="status-detail mb-3">
+                            <div class="detail-label">Current Focus</div>
+                            <div id="currentFocusVal" class="detail-val">Placement Preparation</div>
+                        </div>
+                        <div class="status-detail">
+                            <div class="detail-label">Estimated Wait</div>
+                            <div class="detail-val">5–10 seconds</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-7">
+                    <div class="steps-card text-start h-100">
+                        <ul id="generationSteps" class="list-unstyled mb-0">
+                            <li id="step_goals" class="step-item"><span class="step-icon"><i class="bi bi-circle"></i></span> Aligning with target companies...</li>
+                            <li id="step_skills" class="step-item"><span class="step-icon"><i class="bi bi-circle"></i></span> Assessing Aptitude & DSA levels...</li>
+                            <li id="step_tech" class="step-item"><span class="step-icon"><i class="bi bi-circle"></i></span> Sorting topics Easy to Hard...</li>
+                            <li id="step_resources" class="step-item"><span class="step-icon"><i class="bi bi-circle"></i></span> Selecting learning resources...</li>
+                            <li id="step_milestones" class="step-item"><span class="step-icon"><i class="bi bi-circle"></i></span> Building chronological learning milestones...</li>
+                            <li id="step_projects" class="step-item"><span class="step-icon"><i class="bi bi-circle"></i></span> Planning mock interviews...</li>
+                            <li id="step_quizzes" class="step-item"><span class="step-icon"><i class="bi bi-circle"></i></span> Setting up assessments...</li>
+                            <li id="step_finalize" class="step-item"><span class="step-icon"><i class="bi bi-circle"></i></span> Finalizing placement roadmap...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="progress-section mt-5" style="max-width: 600px; margin: 2rem auto 0 auto;">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted small fw-bold">GENERATION PROGRESS</span>
+                    <span id="progressPercent" class="fw-bold text-primary">0%</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div id="loadingProgressBar" class="progress-bar-fill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Premium Error / Failure Screen -->
+    <div id="aiFailureContainer" class="d-none" style="opacity: 0; transition: opacity 0.3s ease-in;">
+        <div class="error-content text-center">
+            <div class="error-icon mb-4">
+                <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 4rem;"></i>
+            </div>
+            <h2 class="fw-bold mb-3" style="color: var(--text-color);">We couldn't generate your placement roadmap right now.</h2>
+            <p class="text-muted mb-4" id="aiErrorMessage">An unexpected error occurred while communicating with the AI service. Please verify your connection and try again.</p>
+            <div class="d-flex gap-3 justify-content-center">
+                <button id="retryBtn" class="btn btn-primary px-4 py-2 rounded-pill fw-bold">Retry Generation</button>
+                <button id="backToFormBtn" class="btn btn-outline-secondary px-4 py-2 rounded-pill fw-bold">Back to Questionnaire</button>
+            </div>
+        </div>
     </div>
 
     <!-- Scripts -->

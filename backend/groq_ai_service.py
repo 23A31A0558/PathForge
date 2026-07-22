@@ -7,8 +7,8 @@ from dotenv import load_dotenv
 from groq import Groq
 
 from ai.logger import logger
-from ai.prompt_builder import build_prompt
-from ai.json_validator import validate_ai_output
+from ai.prompt_builder import build_prompt, build_placement_prompt
+from ai.json_validator import validate_ai_output, validate_placement_ai_output
 from ai.resource_mapper import map_resources_for_topics
 
 # Get current folder
@@ -106,3 +106,81 @@ def generate_personalized_roadmap(profile_data: dict) -> dict:
                 
     logger.error(f"Failed to generate roadmap after {max_retries + 1} attempts. Last error: {str(last_error)}")
     raise RuntimeError(f"Failed to generate a valid roadmap using Groq API: {str(last_error)}")
+
+def generate_placement_roadmap(profile_data: dict) -> dict:
+    """
+    Executes the placement roadmap generation pipeline:
+    Prompt building -> Call Groq Client with retries -> JSON Schema Validation -> Curated Resource Mapping.
+    Includes up to 3 automatic retries if API errors, timeouts, or JSON validation fails.
+    """
+    global client
+    if not client:
+        # Re-check key in case environment was loaded dynamically
+        api_key_check = os.getenv("GROQ_API_KEY")
+        if not api_key_check:
+            logger.error("GROQ_API_KEY environment variable is not set")
+            raise ValueError("GROQ_API_KEY is not configured in the environment or .env file")
+        client = Groq(api_key=api_key_check)
+
+    logger.info("AI Placement Roadmap generation pipeline execution started using Groq")
+    
+    # 1. Build prompt
+    prompt = build_placement_prompt(profile_data)
+    logger.info("Placement Prompt Generated [OK]")
+    
+    max_retries = 3
+    last_error = None
+    
+    for attempt in range(1, max_retries + 2): # total 4 attempts (1 initial + 3 retries)
+        try:
+            if attempt > 1:
+                logger.info("Placement Retry Started")
+            
+            logger.info("Placement Groq Request Sent")
+            logger.info(f"Groq API call initiated for placement (Attempt {attempt}/{max_retries + 1}). Prompt length: {len(prompt)}")
+            start_time = time.time()
+            
+            # 2. Call Groq
+            model_name = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+            
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.2,
+                response_format={"type": "json_object"},
+                timeout=60.0
+            )
+            
+            elapsed_time = time.time() - start_time
+            logger.info("Groq Placement Response Received")
+            logger.info("Groq Placement Response Received [OK]")
+            
+            raw_content = response.choices[0].message.content
+            if not raw_content:
+                raise ValueError("Empty response received from Groq API")
+                
+            # 3. Validate structure (uses placement validator)
+            validated_data = validate_placement_ai_output(raw_content)
+            logger.info("Placement JSON Validated")
+            logger.info("Placement JSON Valid [OK]")
+            
+            # 4. Map curated learning resources
+            final_data = map_resources_for_topics(validated_data)
+            logger.info("AI Placement Roadmap generation pipeline executed successfully using Groq")
+            return final_data
+            
+        except Exception as e:
+            last_error = e
+            logger.warning(
+                f"Error executing Groq call/validation for placement (Attempt {attempt}/{max_retries + 1}): {str(e)}."
+            )
+            if attempt <= max_retries:
+                delay = 2 ** attempt
+                logger.info(f"Retrying in {delay} seconds...")
+                time.sleep(delay)
+                
+    logger.error(f"Failed to generate placement roadmap after {max_retries + 1} attempts. Last error: {str(last_error)}")
+    raise RuntimeError(f"Failed to generate a valid placement roadmap using Groq API: {str(last_error)}")
+

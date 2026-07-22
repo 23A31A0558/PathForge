@@ -60,9 +60,9 @@ def main():
         print(f"[!] Failed to launch server process: {e}")
         sys.exit(1)
         
-    # Wait for the port to become active (maximum 5 seconds)
+    # Wait for the port to become active (maximum 20 seconds)
     started = False
-    for _ in range(10):
+    for _ in range(40):
         time.sleep(0.5)
         if is_port_in_use(port):
             started = True

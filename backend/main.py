@@ -529,23 +529,65 @@ def save_roadmap_questionnaire(
         )
         
     try:
+        # Check if roadmap generation is currently in progress
+        status_rec = db.query(models.RoadmapGenerationStatus).filter(models.RoadmapGenerationStatus.user_id == current_user.id).first()
+        if status_rec and status_rec.status == "GENERATING":
+            return {"message": "Roadmap is currently generating.", "status": "GENERATING"}
+
         langs_str = ",".join(body.programming_languages) if body.programming_languages else ""
         
         skill_level = body.current_skill_level
         if not body.programming_languages:
             skill_level = "Beginner"
+
+        # Check for identical questionnaire payload (Idempotency)
+        existing_q = db.query(models.RoadmapQuestionnaire).filter(models.RoadmapQuestionnaire.user_id == current_user.id).first()
+        is_identical = False
+        if existing_q:
+            is_identical = (
+                existing_q.name == body.name and
+                existing_q.college == body.college and
+                existing_q.year == body.year and
+                existing_q.branch == body.branch and
+                existing_q.programming_languages == langs_str and
+                existing_q.primary_career_goal == body.primary_career_goal and
+                existing_q.current_skill_level == skill_level and
+                existing_q.daily_learning_time == body.daily_learning_time and
+                existing_q.target_timeline == body.target_timeline
+            )
+
+        if is_identical:
+            # Check if there is an existing valid active roadmap matching this goal
+            existing_roadmap = db.query(models.Roadmap).filter(
+                models.Roadmap.user_id == current_user.id,
+                models.Roadmap.is_archived == False,
+                models.Roadmap.title.like(f"{body.primary_career_goal}%")
+            ).first()
+            if existing_roadmap:
+                current_user.selected_roadmap_id = existing_roadmap.id
+                current_user.onboarding_completed = True
+                current_user.questionnaire_completed = True
+                
+                if not status_rec:
+                    status_rec = models.RoadmapGenerationStatus(user_id=current_user.id, status="READY")
+                    db.add(status_rec)
+                else:
+                    status_rec.status = "READY"
+                    status_rec.error_message = None
+                db.commit()
+                return {"message": "Identical questionnaire found. Re-selected existing roadmap.", "status": "READY"}
             
-        new_q = db.query(models.RoadmapQuestionnaire).filter(models.RoadmapQuestionnaire.user_id == current_user.id).first()
-        if new_q:
-            new_q.name = body.name
-            new_q.college = body.college
-            new_q.year = body.year
-            new_q.branch = body.branch
-            new_q.programming_languages = langs_str
-            new_q.primary_career_goal = body.primary_career_goal
-            new_q.current_skill_level = skill_level
-            new_q.daily_learning_time = body.daily_learning_time
-            new_q.target_timeline = body.target_timeline
+        if existing_q:
+            existing_q.name = body.name
+            existing_q.college = body.college
+            existing_q.year = body.year
+            existing_q.branch = body.branch
+            existing_q.programming_languages = langs_str
+            existing_q.primary_career_goal = body.primary_career_goal
+            existing_q.current_skill_level = skill_level
+            existing_q.daily_learning_time = body.daily_learning_time
+            existing_q.target_timeline = body.target_timeline
+            new_q = existing_q
         else:
             new_q = models.RoadmapQuestionnaire(
                 user_id=current_user.id,
@@ -567,7 +609,6 @@ def save_roadmap_questionnaire(
         current_user.questionnaire_completed = True
         
         # Initialize or reset roadmap status to GENERATING
-        status_rec = db.query(models.RoadmapGenerationStatus).filter(models.RoadmapGenerationStatus.user_id == current_user.id).first()
         if not status_rec:
             status_rec = models.RoadmapGenerationStatus(user_id=current_user.id, status="GENERATING")
             db.add(status_rec)
@@ -592,7 +633,7 @@ def save_roadmap_questionnaire(
             backend_logger.error(f"Failed to start roadmap generation for user_id={current_user.id}: {str(background_err)}")
             raise HTTPException(status_code=500, detail=f"Failed to start roadmap generation: {str(background_err)}")
 
-        return {"message": "Roadmap questionnaire saved and AI roadmap generation started in background."}
+        return {"message": "Roadmap questionnaire saved and AI roadmap generation started in background.", "status": "GENERATING"}
     except HTTPException:
         raise
     except Exception as e:
@@ -732,6 +773,7 @@ def get_career_quiz(
 @app.post("/placement-profile")
 def save_placement_profile(
     body: schemas.PlacementProfileCreate,
+    background_tasks: BackgroundTasks,
     current_user: models.User = Depends(read_users_me),
     db: Session = Depends(database.get_db)
 ):
@@ -755,8 +797,22 @@ def save_placement_profile(
         db.add(new_profile)
         
         current_user.onboarding_completed = True
+        
+        # Initialize or reset roadmap status to GENERATING
+        status_rec = db.query(models.RoadmapGenerationStatus).filter(models.RoadmapGenerationStatus.user_id == current_user.id).first()
+        if not status_rec:
+            status_rec = models.RoadmapGenerationStatus(user_id=current_user.id, status="GENERATING")
+            db.add(status_rec)
+        else:
+            status_rec.status = "GENERATING"
+            status_rec.error_message = None
+            
         db.commit()
-        return {"message": "Placement profile saved successfully."}
+        
+        # Trigger background generation of placement roadmap
+        roadmap_ai_service.generatePlacementRoadmapBackground(background_tasks, db, current_user.id)
+        
+        return {"message": "Placement profile saved and AI placement roadmap generation started.", "status": "GENERATING"}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to save placement profile: {str(e)}")
@@ -770,6 +826,106 @@ def get_placement_profile(
     if not p:
         raise HTTPException(status_code=404, detail="Placement profile not found.")
     return p
+
+
+@app.get("/placement-roadmap", response_model=schemas.RoadmapResponse)
+def get_placement_roadmap(
+    current_user: models.User = Depends(read_users_me),
+    db: Session = Depends(database.get_db)
+):
+    roadmap = db.query(models.Roadmap).filter(
+        models.Roadmap.user_id == current_user.id,
+        models.Roadmap.type == "placement"
+    ).first()
+    if not roadmap:
+        raise HTTPException(status_code=404, detail="Placement roadmap not found")
+        
+    loaded = roadmap_ai_service.loadRoadmap(db, current_user.id, roadmap_id=roadmap.id)
+    if not loaded:
+        raise HTTPException(status_code=404, detail="Placement roadmap details not found")
+    return loaded[0]
+
+
+@app.get("/placement-roadmap/progress", response_model=List[schemas.ProgressResponse])
+def get_placement_progress(
+    roadmap_id: int,
+    current_user: models.User = Depends(read_users_me),
+    db: Session = Depends(database.get_db)
+):
+    # Verify ownership of this roadmap
+    roadmap = db.query(models.Roadmap).filter(models.Roadmap.id == roadmap_id).first()
+    if not roadmap or roadmap.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+        
+    # Get topics for this roadmap
+    phases = db.query(models.RoadmapPhase).filter(models.RoadmapPhase.roadmap_id == roadmap_id).all()
+    phase_ids = [p.id for p in phases]
+    topics = db.query(models.RoadmapTopic).filter(models.RoadmapTopic.phase_id.in_(phase_ids)).all() if phase_ids else []
+    topic_ids = [t.id for t in topics]
+    
+    if not topic_ids:
+        return []
+        
+    prog = db.query(models.Progress).filter(
+        models.Progress.user_id == current_user.id,
+        models.Progress.micro_step_id.in_(topic_ids),
+        models.Progress.is_completed == True
+    ).all()
+    return prog
+
+
+@app.get("/placement-roadmap/progress/score", response_model=schemas.ScoreResponse)
+def get_placement_score(
+    roadmap_id: int,
+    current_user: models.User = Depends(read_users_me),
+    db: Session = Depends(database.get_db)
+):
+    # Verify ownership
+    roadmap = db.query(models.Roadmap).filter(models.Roadmap.id == roadmap_id).first()
+    if not roadmap or roadmap.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+        
+    score = calculate_user_total_score(db, current_user.id, roadmap_id)
+    return {"score": score}
+
+
+@app.post("/placement-roadmap/progress/complete")
+def mark_placement_progress_complete(
+    progress_data: schemas.ProgressComplete, 
+    current_user: models.User = Depends(read_users_me), 
+    db: Session = Depends(database.get_db)
+):
+    topic = db.query(models.RoadmapTopic).filter(models.RoadmapTopic.id == progress_data.micro_step_id).first()
+    if not topic:
+        raise HTTPException(status_code=404, detail="Topic not found")
+        
+    # Ownership validation
+    phase = db.query(models.RoadmapPhase).filter(models.RoadmapPhase.id == topic.phase_id).first()
+    if not phase:
+        raise HTTPException(status_code=404, detail="Topic phase not found")
+    roadmap = db.query(models.Roadmap).filter(models.Roadmap.id == phase.roadmap_id).first()
+    if not roadmap or roadmap.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied: you do not own this roadmap")
+
+    # Complete the RoadmapTopic
+    topic.completed = True
+    
+    # Save to Progress table
+    existing_prog = db.query(models.Progress).filter(
+        models.Progress.user_id == current_user.id,
+        models.Progress.micro_step_id == topic.id
+    ).first()
+    if not existing_prog:
+        new_prog = models.Progress(
+            user_id=current_user.id, 
+            micro_step_id=topic.id,
+            is_completed=True,
+            completed_at=datetime.datetime.utcnow()
+        )
+        db.add(new_prog)
+    db.commit()
+    return {"message": "Placement step marked as completed"}
+
 
 
 @app.post("/answers")
@@ -1031,152 +1187,7 @@ def delete_roadmap_endpoint(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete roadmap: {str(e)}")
 
-@app.post("/roadmap/regenerate/{roadmap_id}")
-def regenerate_roadmap_endpoint(
-    roadmap_id: int,
-    current_user: models.User = Depends(read_users_me),
-    db: Session = Depends(database.get_db)
-):
-    old_roadmap = db.query(models.Roadmap).filter(models.Roadmap.id == roadmap_id).first()
-    if not old_roadmap:
-        raise HTTPException(status_code=404, detail="Roadmap not found")
-    if old_roadmap.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied: you do not own this roadmap")
-        
-    if not os.getenv("GROQ_API_KEY"):
-        raise HTTPException(status_code=400, detail="Missing Groq API Key")
 
-    # Fetch profile data
-    questionnaire = db.query(models.RoadmapQuestionnaire).filter(models.RoadmapQuestionnaire.user_id == current_user.id).first()
-    if not questionnaire:
-        raise HTTPException(status_code=400, detail="Roadmap questionnaire not found. Please complete the questionnaire first.")
-
-    learning_style = "Practical/Project-based"
-    ans = db.query(models.Answer).join(
-        models.Question, models.Answer.question_id == models.Question.id
-    ).filter(
-        models.Question.question_text == "Learning style",
-        models.Answer.user_id == current_user.id
-    ).first()
-    if ans:
-        learning_style = ans.selected_option
-        
-    career_quiz = db.query(models.CareerRecommendationQuiz).filter(models.CareerRecommendationQuiz.user_id == current_user.id).first()
-    placement_profile = db.query(models.PlacementProfile).filter(models.PlacementProfile.user_id == current_user.id).first()
-
-    profile_data = {
-        "career": questionnaire.primary_career_goal,
-        "languages": questionnaire.programming_languages,
-        "skill": questionnaire.current_skill_level,
-        "study_time": questionnaire.daily_learning_time,
-        "timeline": questionnaire.target_timeline,
-        "learning_style": learning_style,
-        "year": questionnaire.year,
-        "branch": questionnaire.branch,
-        "questionnaire_answers": {
-            "name": questionnaire.name,
-            "college": questionnaire.college,
-            "year": questionnaire.year,
-            "branch": questionnaire.branch,
-            "languages": questionnaire.programming_languages,
-            "career": questionnaire.primary_career_goal,
-            "skill": questionnaire.current_skill_level,
-            "study_time": questionnaire.daily_learning_time,
-            "timeline": questionnaire.target_timeline
-        },
-        "career_quiz_answers": {
-            "activities": career_quiz.activities,
-            "subject": career_quiz.subject,
-            "work_type": career_quiz.work_type,
-            "recommended_careers": career_quiz.recommended_careers
-        } if career_quiz else None,
-        "placement_answers": {
-            "focus_areas": placement_profile.aptitude_level, # compatibility
-            "dsa_level": placement_profile.dsa_level,
-            "target_companies": placement_profile.target_companies,
-            "timeline": placement_profile.timeline
-        } if placement_profile else None
-    }
-
-    try:
-        backend_logger.info("Retry Started")
-        
-        # Call Groq & Validate
-        import groq_ai_service
-        generated_data = groq_ai_service.generate_personalized_roadmap(profile_data)
-        backend_logger.info("JSON Validated")
-        
-        rm_index = 0 if old_roadmap.type == "fast_track" else 1
-        rm_schema = generated_data["roadmaps"][rm_index]
-        
-        # Save temporary roadmap
-        new_rm = models.Roadmap(
-            user_id=current_user.id,
-            title=rm_schema["title"],
-            description=rm_schema["description"],
-            type=old_roadmap.type,
-            generated_by_ai=True,
-            created_at=datetime.datetime.utcnow()
-        )
-        db.add(new_rm)
-        db.flush()
-        
-        for ph_schema in rm_schema["phases"]:
-            new_phase = models.RoadmapPhase(
-                roadmap_id=new_rm.id,
-                phase_number=ph_schema["phase_number"],
-                phase_title=ph_schema["phase_title"],
-                estimated_duration=ph_schema["estimated_duration"]
-            )
-            db.add(new_phase)
-            db.flush()
-            
-            for idx, tp_schema in enumerate(ph_schema["topics"]):
-                resources_json = json.dumps(tp_schema["resources"])
-                new_topic = models.RoadmapTopic(
-                    phase_id=new_phase.id,
-                    topic_title=tp_schema["topic"],
-                    difficulty=tp_schema["difficulty"],
-                    estimated_hours=tp_schema["estimated_hours"],
-                    resources_json=resources_json,
-                    mini_project=tp_schema["mini_project"],
-                    quiz_required=tp_schema["quiz_required"],
-                    completed=False,
-                    order_number=idx + 1
-                )
-                db.add(new_topic)
-        db.flush()
-        
-        # Switch selection
-        if current_user.selected_roadmap_id == old_roadmap.id:
-            current_user.selected_roadmap_id = new_rm.id
-            
-        # Delete old roadmap
-        old_phases = db.query(models.RoadmapPhase).filter(models.RoadmapPhase.roadmap_id == old_roadmap.id).all()
-        old_phase_ids = [p.id for p in old_phases]
-        old_topics = db.query(models.RoadmapTopic).filter(models.RoadmapTopic.phase_id.in_(old_phase_ids)).all() if old_phase_ids else []
-        old_topic_ids = [t.id for t in old_topics]
-        
-        if old_topic_ids:
-            quizzes = db.query(models.Quiz).filter(models.Quiz.micro_step_id.in_(old_topic_ids)).all()
-            quiz_ids = [q.id for q in quizzes]
-            if quiz_ids:
-                db.query(models.QuizQuestion).filter(models.QuizQuestion.quiz_id.in_(quiz_ids)).delete(synchronize_session=False)
-            db.query(models.Quiz).filter(models.Quiz.micro_step_id.in_(old_topic_ids)).delete(synchronize_session=False)
-            db.query(models.Progress).filter(models.Progress.micro_step_id.in_(old_topic_ids)).delete(synchronize_session=False)
-            db.query(models.QuizAttempt).filter(models.QuizAttempt.micro_step_id.in_(old_topic_ids)).delete(synchronize_session=False)
-            db.query(models.RoadmapTopic).filter(models.RoadmapTopic.phase_id.in_(old_phase_ids)).delete(synchronize_session=False)
-            
-        db.query(models.RoadmapPhase).filter(models.RoadmapPhase.roadmap_id == old_roadmap.id).delete(synchronize_session=False)
-        db.delete(old_roadmap)
-        
-        db.commit()
-        backend_logger.info(f"Roadmap Regenerated: {new_rm.id}")
-        return {"success": True, "message": "Roadmap regenerated successfully", "new_roadmap_id": new_rm.id}
-    except Exception as e:
-        db.rollback()
-        backend_logger.error(f"Generation Failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Regeneration failed: {str(e)}")
 
 
 def calculate_user_quiz_bonus(db: Session, user_id: int, roadmap_id: Optional[int] = None) -> int:
