@@ -1,4 +1,4 @@
-# 🚀 PathForge - AI-Powered Personalized Learning & Placement Preparation Platform
+# 🚀 PathForge – Personalized AI Career Roadmap Platform
 
 <div align="center">
 
